@@ -219,7 +219,12 @@ class EkikritRepository(
         val student = database.studentDao().getStudent(currentStudentId) ?: return@withContext
         val documents = database.documentDao().getDocumentsForStudent(currentStudentId)
 
-        val output = UnifiedVerificationEngine.executeSevenSourceVerification(student, application, documents)
+        val output = UnifiedVerificationEngine.executeSevenSourceVerification(
+            student = student,
+            application = application,
+            documents = documents,
+            offlineMode = _isOfflineMode.value
+        )
 
         // Clear previous records for this application and save new ones
         database.verificationRecordDao().deleteForApp(applicationId)
