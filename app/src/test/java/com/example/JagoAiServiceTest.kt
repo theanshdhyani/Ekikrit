@@ -1,9 +1,9 @@
 package com.example
 
 import com.example.data.ai.JagoAiService
-import com.example.data.eligibility.EligibilityEvaluation
 import com.example.data.local.SeedData
 import com.example.data.model.ApplicationEntity
+import com.example.domain.EligibilityEvaluation
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.*
 import org.junit.Test
@@ -53,24 +53,24 @@ class JagoAiServiceTest {
     fun statusQuery_isAnsweredInHindiOdiaAndGondi() = runBlocking {
         val app = flaggedApplication()
 
-        val hindi = jago.generateResponse("What is my application status?", "hi", birsa, listOf(app), 1, emptyList())
+        val hindi = jago.generateResponse("What is my application status?", "hi", birsa, listOf(app), pendingReviewCount = 1, unclaimedEvaluations = emptyList())
         assertTrue(hindi.content.contains("नमस्ते Birsa"))
         assertTrue(hindi.content.contains("Reviewer Desk"))
 
-        val odia = jago.generateResponse("status of application", "or", birsa, listOf(app), 1, emptyList())
+        val odia = jago.generateResponse("status of application", "or", birsa, listOf(app), pendingReviewCount = 1, unclaimedEvaluations = emptyList())
         assertTrue(odia.content.contains("ନମସ୍କାର Birsa"))
 
-        val gondi = jago.generateResponse("status", "gon", birsa, listOf(app), 1, emptyList())
+        val gondi = jago.generateResponse("status", "gon", birsa, listOf(app), pendingReviewCount = 1, unclaimedEvaluations = emptyList())
         assertTrue(gondi.content.contains("जोहार Birsa"))
     }
 
     @Test
     fun englishStatusQuery_mentionsReviewerDeskOnlyWhenSomethingIsFlagged() = runBlocking {
-        val flagged = jago.generateResponse("status", "en", birsa, listOf(flaggedApplication()), 1, emptyList())
+        val flagged = jago.generateResponse("status", "en", birsa, listOf(flaggedApplication()), pendingReviewCount = 1, unclaimedEvaluations = emptyList())
         assertTrue(flagged.content.contains("Reviewer Desk"))
 
         val clean = jago.generateResponse(
-            "status", "en", birsa, listOf(flaggedApplication().copy(hasDiscrepancy = false)), 0, emptyList()
+            "status", "en", birsa, listOf(flaggedApplication().copy(hasDiscrepancy = false)), pendingReviewCount = 0, unclaimedEvaluations = emptyList()
         )
         assertFalse(clean.content.contains("Reviewer Desk"))
         assertTrue(clean.content.contains("no pending discrepancies"))
@@ -79,7 +79,7 @@ class JagoAiServiceTest {
     @Test
     fun eligibilityQuery_surfacesTheTopUnclaimedScheme() = runBlocking {
         val reply = jago.generateResponse(
-            "Am I eligible for Top Class?", "en", birsa, emptyList(), 0, listOf(topClassEvaluation())
+            "Am I eligible for Top Class?", "en", birsa, emptyList(), pendingReviewCount = 0, unclaimedEvaluations = listOf(topClassEvaluation())
         )
         assertTrue(reply.content.contains("Top Class Education Scheme"))
     }
@@ -93,7 +93,7 @@ class JagoAiServiceTest {
         val allContent = buildString {
             for (lang in languages) {
                 for (q in queries) {
-                    append(jago.generateResponse(q, lang, birsa, listOf(app), 1, listOf(topClassEvaluation())).content)
+                    append(jago.generateResponse(q, lang, birsa, listOf(app), pendingReviewCount = 1, unclaimedEvaluations = listOf(topClassEvaluation())).content)
                     append(' ')
                 }
             }
@@ -107,7 +107,7 @@ class JagoAiServiceTest {
 
     @Test
     fun unknownQuery_fallsBackToIntroductionWithQuickChips() = runBlocking {
-        val reply = jago.generateResponse("hello", "en", birsa, emptyList(), 0, emptyList())
+        val reply = jago.generateResponse("hello", "en", birsa, emptyList(), pendingReviewCount = 0, unclaimedEvaluations = emptyList())
 
         assertTrue(reply.content.contains("JAGO"))
         assertTrue(reply.quickChips.isNotEmpty())

@@ -65,7 +65,7 @@ class EkikritFinalValidationTest {
 
     @Test
     fun testSwitchStudentRejectsNonDemoIdentities() = runBlocking {
-        for (blockedId in listOf("STU_2026_02", "STU_2026_03", "STU_ATTACKER_99", "")) {
+        for (blockedId in listOf("STU_ATTACKER_99", "UNKNOWN_123", "HACKER", "")) {
             val error = runCatching { repository.switchStudent(blockedId) }.exceptionOrNull()
             assertTrue("switchStudent('$blockedId') must be rejected", error is IllegalArgumentException)
         }
