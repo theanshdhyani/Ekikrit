@@ -1,5 +1,6 @@
 package com.example.ui.components
 
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -25,6 +26,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.data.model.AppLanguage
 import com.example.data.model.JagoMessage
+import com.example.ui.util.LocalAppStrings
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -32,20 +34,23 @@ import kotlinx.coroutines.launch
 fun JagoChatModal(
     messages: List<JagoMessage>,
     currentLanguage: AppLanguage,
+    isTyping: Boolean = false,
     onLanguageSelect: (AppLanguage) -> Unit,
     onSendMessage: (String) -> Unit,
+    onSpeakMessage: ((String) -> Unit)? = null,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val strings = LocalAppStrings.current
     var inputText by remember { mutableStateOf("") }
     var showLanguageMenu by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val listState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
 
-    LaunchedEffect(messages.size) {
+    LaunchedEffect(messages.size, isTyping) {
         if (messages.isNotEmpty()) {
-            listState.animateScrollToItem(messages.size - 1)
+            listState.animateScrollToItem(messages.size - 1 + if (isTyping) 1 else 0)
         }
     }
 
@@ -91,7 +96,7 @@ fun JagoChatModal(
                     Column {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
-                                text = "JAGO Assistant",
+                                text = strings.jagoTitle,
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold
                             )
@@ -101,7 +106,7 @@ fun JagoChatModal(
                                 shape = RoundedCornerShape(4.dp)
                             ) {
                                 Text(
-                                    text = "Live App-Aware",
+                                    text = "AI Assist",
                                     style = MaterialTheme.typography.labelSmall,
                                     color = Color(0xFF059669),
                                     fontWeight = FontWeight.Bold,
@@ -110,7 +115,7 @@ fun JagoChatModal(
                             }
                         }
                         Text(
-                            text = "ST Scholarship Guide • ${currentLanguage.displayName}",
+                            text = "${strings.jagoSubtitle} • ${currentLanguage.displayName}",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -157,7 +162,7 @@ fun JagoChatModal(
 
             HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
 
-            // Scrollable Chat Message List (Takes all space above the input panel)
+            // Scrollable Chat Message List
             LazyColumn(
                 state = listState,
                 modifier = Modifier
@@ -171,13 +176,21 @@ fun JagoChatModal(
                         message = msg,
                         onChipClick = { chipText ->
                             onSendMessage(chipText)
-                        }
+                        },
+                        onSpeak = onSpeakMessage
                     )
                     Spacer(modifier = Modifier.height(10.dp))
                 }
+
+                if (isTyping) {
+                    item {
+                        TypingIndicator()
+                        Spacer(modifier = Modifier.height(10.dp))
+                    }
+                }
             }
 
-            // PINNED Bottom Container with Quick Chips & Direct Message Box (Always Visible)
+            // PINNED Bottom Container with Quick Chips & Direct Message Box
             Surface(
                 modifier = Modifier.fillMaxWidth(),
                 color = MaterialTheme.colorScheme.surface,
@@ -193,8 +206,8 @@ fun JagoChatModal(
                     // Contextual Quick Suggestions Row
                     val latestAssistantMessage = messages.lastOrNull { it.sender == "JAGO" }
                     val quickChips = latestAssistantMessage?.quickChips?.ifEmpty {
-                        listOf("Track Application Status", "Explain Income Variance", "Top Class Scheme", "DBT Details")
-                    } ?: listOf("Track Application Status", "Explain Income Variance", "Top Class Scheme", "DBT Details")
+                        listOf(strings.jagoChipStatus, strings.jagoChipVariance, strings.jagoChipEligible, strings.jagoChipPayment)
+                    } ?: listOf(strings.jagoChipStatus, strings.jagoChipVariance, strings.jagoChipEligible, strings.jagoChipPayment)
 
                     LazyRow(
                         modifier = Modifier
@@ -219,7 +232,7 @@ fun JagoChatModal(
                         }
                     }
 
-                    // Direct Message Box (Prominently anchored at bottom)
+                    // Direct Message Box
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically
@@ -229,7 +242,7 @@ fun JagoChatModal(
                             onValueChange = { inputText = it },
                             placeholder = {
                                 Text(
-                                    text = "Ask JAGO in ${currentLanguage.nativeName} or English...",
+                                    text = "${strings.askJagoPlaceholder} (${currentLanguage.nativeName})",
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -285,7 +298,8 @@ fun JagoChatModal(
 @Composable
 fun ChatBubble(
     message: JagoMessage,
-    onChipClick: (String) -> Unit
+    onChipClick: (String) -> Unit,
+    onSpeak: ((String) -> Unit)? = null
 ) {
     val isUser = message.sender == "USER"
     val alignment = if (isUser) Alignment.End else Alignment.Start
@@ -335,13 +349,76 @@ fun ChatBubble(
                         color = if (isUser) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = message.timestamp,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = if (isUser) Color.White.copy(alpha = 0.7f) else Color(0xFF94A3B8),
-                        modifier = Modifier.align(Alignment.End)
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        if (!isUser && onSpeak != null) {
+                            IconButton(
+                                onClick = { onSpeak(message.content) },
+                                modifier = Modifier.size(24.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.VolumeUp,
+                                    contentDescription = "Speak message",
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        } else {
+                            Spacer(modifier = Modifier.width(1.dp))
+                        }
+                        Text(
+                            text = message.timestamp,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = if (isUser) Color.White.copy(alpha = 0.7f) else Color(0xFF94A3B8)
+                        )
+                    }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+fun TypingIndicator() {
+    val infiniteTransition = rememberInfiniteTransition(label = "typing")
+    val dot1Alpha by infiniteTransition.animateFloat(
+        initialValue = 0.2f,
+        targetValue = 1.0f,
+        animationSpec = infiniteRepeatable(animation = tween(600, 0), repeatMode = RepeatMode.Reverse),
+        label = "dot1"
+    )
+    val dot2Alpha by infiniteTransition.animateFloat(
+        initialValue = 0.2f,
+        targetValue = 1.0f,
+        animationSpec = infiniteRepeatable(animation = tween(600, 200), repeatMode = RepeatMode.Reverse),
+        label = "dot2"
+    )
+    val dot3Alpha by infiniteTransition.animateFloat(
+        initialValue = 0.2f,
+        targetValue = 1.0f,
+        animationSpec = infiniteRepeatable(animation = tween(600, 400), repeatMode = RepeatMode.Reverse),
+        label = "dot3"
+    )
+
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.padding(start = 36.dp, top = 4.dp)
+    ) {
+        Surface(
+            color = MaterialTheme.colorScheme.surfaceVariant,
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(modifier = Modifier.size(6.dp).clip(CircleShape).background(Color(0xFFD97706).copy(alpha = dot1Alpha)))
+                Box(modifier = Modifier.size(6.dp).clip(CircleShape).background(Color(0xFFD97706).copy(alpha = dot2Alpha)))
+                Box(modifier = Modifier.size(6.dp).clip(CircleShape).background(Color(0xFFD97706).copy(alpha = dot3Alpha)))
             }
         }
     }
@@ -364,7 +441,7 @@ fun JagoFloatingButton(
         text = {
             Column {
                 Text("जागो • JAGO", fontWeight = FontWeight.Bold, color = Color.White)
-                Text("ST AI Guide", style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.85f))
+                Text("AI Guide", style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.85f))
             }
         },
         containerColor = Color(0xFFD97706),

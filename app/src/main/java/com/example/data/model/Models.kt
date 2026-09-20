@@ -8,7 +8,7 @@ enum class AppLanguage(val code: String, val displayName: String, val nativeName
     ENGLISH("en", "English", "English"),
     HINDI("hi", "Hindi", "हिन्दी"),
     ODIA("or", "Odia", "ଓଡ଼ିଆ"),
-    GONDI("gon", "Gondi", "गोंडी")
+    GONDI("gon", "Gondi", "गोंडी (Beta)")
 }
 
 enum class ApplicationStage(val displayName: String, val stepIndex: Int) {

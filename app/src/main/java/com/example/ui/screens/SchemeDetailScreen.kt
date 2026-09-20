@@ -15,6 +15,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.data.model.ApplicationEntity
 import com.example.data.model.DocumentEntity
@@ -22,6 +24,8 @@ import com.example.data.model.SchemeEntity
 import com.example.data.model.VerificationRecordEntity
 import com.example.ui.components.ApplicationTimeline
 import com.example.ui.components.VerificationChecklist
+import com.example.ui.theme.EkikritTheme
+import com.example.ui.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -37,14 +41,18 @@ fun SchemeDetailScreen(
     isSimulating: Boolean,
     modifier: Modifier = Modifier
 ) {
+    val strings = LocalAppStrings.current
     var showPullDocSheet by remember { mutableStateOf(false) }
 
     if (application == null) {
         Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text("Scheme application not found.")
+            Text(strings.noDisbursementsFound)
         }
         return
     }
+
+    val localizedSchemeName = localizeSchemeName(strings, application.schemeCode, application.schemeName)
+    val localizedStageName = localizeStage(strings, application.currentStage)
 
     Scaffold(
         topBar = {
@@ -52,21 +60,24 @@ fun SchemeDetailScreen(
                 title = {
                     Column {
                         Text(
-                            text = application.schemeName,
+                            text = localizedSchemeName,
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
-                            maxLines = 1
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                         Text(
                             text = "App ID: ${application.id} • ${scheme?.portalOrigin ?: "NSP"}",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack, modifier = Modifier.testTag("scheme_detail_back_btn")) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = strings.cancel)
                     }
                 }
             )
@@ -102,17 +113,8 @@ fun SchemeDetailScreen(
                     )
                     Spacer(modifier = Modifier.width(12.dp))
                     Column(modifier = Modifier.weight(1f)) {
-                        val stageNameFormatted = when (application.currentStage) {
-                            "SUBMITTED" -> "Application Submitted"
-                            "INSTITUTE_VERIFICATION", "UNDER_VERIFICATION" -> "Institute Verification"
-                            "STATE_VERIFICATION" -> "State Verification"
-                            "MINISTRY_REVIEW" -> "Ministry Review"
-                            "SANCTIONED" -> "Sanctioned"
-                            "DISBURSED" -> "Payment Disbursed"
-                            else -> application.currentStage
-                        }
                         Text(
-                            text = if (application.hasDiscrepancy) "Exception Routing Active" else "Current Stage: $stageNameFormatted",
+                            text = if (application.hasDiscrepancy) "Exception Routing Active" else "${strings.trackStatusTab}: $localizedStageName",
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.Bold,
                             color = if (application.hasDiscrepancy) Color(0xFFD97706) else MaterialTheme.colorScheme.primary
@@ -136,12 +138,13 @@ fun SchemeDetailScreen(
                     ),
                     modifier = Modifier
                         .fillMaxWidth()
+                        .heightIn(min = 48.dp)
                         .testTag("jump_to_reviewer_desk_btn"),
                     shape = RoundedCornerShape(10.dp)
                 ) {
                     Icon(Icons.Default.Verified, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Resolve Mismatch in Reviewer Queue (Live Demo)")
+                    Text("Resolve Mismatch in Reviewer Queue")
                 }
             }
 
@@ -182,7 +185,7 @@ fun SchemeDetailScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Section 4.4: DigiLocker Single-Wallet Integration
+            // DigiLocker Single-Wallet Integration
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
@@ -195,7 +198,7 @@ fun SchemeDetailScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Column {
+                        Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 text = "Linked DigiLocker Documents",
                                 style = MaterialTheme.typography.titleMedium,
@@ -219,6 +222,7 @@ fun SchemeDetailScreen(
                     Spacer(modifier = Modifier.height(10.dp))
 
                     documents.take(3).forEach { doc ->
+                        val localizedType = localizeDocType(strings, doc.type)
                         Surface(
                             color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
                             shape = RoundedCornerShape(10.dp),
@@ -231,7 +235,10 @@ fun SchemeDetailScreen(
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.weight(1f)
+                                ) {
                                     Icon(
                                         imageVector = Icons.Default.Description,
                                         contentDescription = null,
@@ -239,9 +246,21 @@ fun SchemeDetailScreen(
                                         modifier = Modifier.size(20.dp)
                                     )
                                     Spacer(modifier = Modifier.width(10.dp))
-                                    Column {
-                                        Text(text = doc.title, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
-                                        Text(text = "${doc.source} • ${doc.docNumberMasked}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = "$localizedType (${doc.title})",
+                                            style = MaterialTheme.typography.labelMedium,
+                                            fontWeight = FontWeight.SemiBold,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                        Text(
+                                            text = "${doc.source} • ${doc.docNumberMasked}",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
                                     }
                                 }
                                 Surface(
@@ -263,7 +282,9 @@ fun SchemeDetailScreen(
                     Spacer(modifier = Modifier.height(10.dp))
                     OutlinedButton(
                         onClick = { showPullDocSheet = true },
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 48.dp),
                         shape = RoundedCornerShape(10.dp)
                     ) {
                         Icon(Icons.Default.CloudDownload, contentDescription = null, modifier = Modifier.size(16.dp))
@@ -320,7 +341,7 @@ fun SchemeDetailScreen(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Column {
+                            Column(modifier = Modifier.weight(1f)) {
                                 Text(text = title, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
                                 Text(text = "$issuer • $number", style = MaterialTheme.typography.labelSmall, color = Color(0xFF64748B))
                             }
@@ -332,5 +353,23 @@ fun SchemeDetailScreen(
                 Spacer(modifier = Modifier.height(16.dp))
             }
         }
+    }
+}
+
+@Preview(name = "SchemeDetail 360x640", widthDp = 360, heightDp = 640)
+@Composable
+fun SchemeDetailScreenPreview() {
+    EkikritTheme {
+        SchemeDetailScreen(
+            application = null,
+            scheme = null,
+            documents = emptyList(),
+            verificationRecords = emptyList(),
+            onBack = {},
+            onTriggerVerification = {},
+            onOpenReviewDesk = {},
+            onPullDocument = { _, _, _, _ -> },
+            isSimulating = false
+        )
     }
 }

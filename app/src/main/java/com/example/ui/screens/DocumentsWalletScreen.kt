@@ -16,10 +16,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.data.model.DocumentEntity
 import com.example.ui.components.DigiLockerConnectModal
-import com.example.ui.util.LocalAppStrings
+import com.example.ui.theme.EkikritTheme
+import com.example.ui.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -98,7 +101,10 @@ fun DocumentsWalletScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.weight(1f)
+                        ) {
                             Surface(
                                 color = Color(0xFF0284C7),
                                 shape = CircleShape,
@@ -114,22 +120,26 @@ fun DocumentsWalletScreen(
                                 }
                             }
                             Spacer(modifier = Modifier.width(12.dp))
-                            Column {
+                            Column(modifier = Modifier.weight(1f)) {
                                 Text(
                                     text = strings.digiLockerWalletTitle,
                                     style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold
+                                    fontWeight = FontWeight.Bold,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
                                 )
                                 Text(
                                     text = strings.digiLockerWalletSubtitle,
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
                                 )
                             }
                         }
 
                         TextButton(onClick = onOpenConsentDialog) {
-                            Text("Consent Info", style = MaterialTheme.typography.labelSmall)
+                            Text("DPDP Info", style = MaterialTheme.typography.labelSmall)
                         }
                     }
 
@@ -166,7 +176,9 @@ fun DocumentsWalletScreen(
                                 Text(
                                     text = if (isDigiLockerLinked) "Linked via Aadhaar OTP (Demographics 99.1% verified)" else "Connect to pull authentic government records with 0 scanning",
                                     style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis
                                 )
                             }
                         }
@@ -207,6 +219,7 @@ fun DocumentsWalletScreen(
                             onClick = { showDigiLockerModal = true },
                             modifier = Modifier
                                 .weight(1f)
+                                .heightIn(min = 48.dp)
                                 .testTag("connect_digilocker_action_btn"),
                             shape = RoundedCornerShape(12.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0284C7))
@@ -225,7 +238,9 @@ fun DocumentsWalletScreen(
                                 }
                             },
                             shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier.testTag("pull_new_digilocker_doc_btn")
+                            modifier = Modifier
+                                .heightIn(min = 48.dp)
+                                .testTag("pull_new_digilocker_doc_btn")
                         ) {
                             Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
                             Spacer(modifier = Modifier.width(4.dp))
@@ -321,7 +336,7 @@ fun DocumentsWalletScreen(
             },
             confirmButton = {
                 Button(onClick = { selectedDocForInspect = null }) {
-                    Text("Close")
+                    Text(strings.close)
                 }
             }
         )
@@ -371,7 +386,7 @@ fun DocumentsWalletScreen(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Column {
+                            Column(modifier = Modifier.weight(1f)) {
                                 Text(text = title, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
                                 Text(text = "$issuer • $number", style = MaterialTheme.typography.labelSmall, color = Color(0xFF64748B))
                             }
@@ -413,7 +428,10 @@ private fun DocumentWalletCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.weight(1f)
+                ) {
                     Icon(
                         imageVector = Icons.Default.Badge,
                         contentDescription = null,
@@ -421,16 +439,20 @@ private fun DocumentWalletCard(
                         modifier = Modifier.size(22.dp)
                     )
                     Spacer(modifier = Modifier.width(10.dp))
-                    Column {
+                    Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = doc.title,
                             style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                         Text(
                             text = "Doc #: ${doc.docNumberMasked}",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
                 }
@@ -464,16 +486,20 @@ private fun DocumentWalletCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column {
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = "Issued by: ${doc.issuedBy}",
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                     Text(
                         text = "Issued: ${doc.issuedDate} • Source: ${doc.source}",
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
 
@@ -490,5 +516,17 @@ private fun DocumentWalletCard(
                 }
             }
         }
+    }
+}
+
+@Preview(name = "Wallet 360x640", widthDp = 360, heightDp = 640)
+@Composable
+fun DocumentsWalletScreenPreview() {
+    EkikritTheme {
+        DocumentsWalletScreen(
+            documents = emptyList(),
+            onPullNewDocument = { _, _, _, _ -> },
+            onOpenConsentDialog = {}
+        )
     }
 }

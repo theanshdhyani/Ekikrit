@@ -198,17 +198,17 @@ class EkikritFinalValidationTest {
         repository.switchStudent(student1.id)
 
         val statusResponse = repository.generateJagoResponse("What is my application status?")
-        assertTrue(statusResponse.contains("Top Class") || statusResponse.contains("INSTITUTE") || statusResponse.contains("Stage"))
+        assertTrue(statusResponse.content.contains("Top Class") || statusResponse.content.contains("INSTITUTE") || statusResponse.content.contains("Stage"))
 
         val paymentResponse = repository.generateJagoResponse("When will my payment disburse?")
-        assertTrue(paymentResponse.contains("DBT") || paymentResponse.contains("Aadhaar Rail"))
+        assertTrue(paymentResponse.content.contains("DBT") || paymentResponse.content.contains("Aadhaar Rail"))
     }
 
     @Test
     fun testJagoOfflineFallbackIndicator() = runBlocking {
         repository.setOfflineMode(true)
         val response = repository.generateJagoResponse("Check my eligibility")
-        assertTrue(response.contains("Offline Assistance Mode Active"))
+        assertTrue(response.content.contains("Offline Assistance Mode Active"))
     }
 
     @Test

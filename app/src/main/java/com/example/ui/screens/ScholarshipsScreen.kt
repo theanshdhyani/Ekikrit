@@ -19,6 +19,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.data.model.ApplicationEntity
 import com.example.data.model.DocumentEntity
@@ -28,6 +30,8 @@ import com.example.domain.EligibilityEngine
 import com.example.domain.EligibilityResult
 import com.example.domain.EligibilityStatus
 import com.example.ui.components.ScholarshipWizardModal
+import com.example.ui.theme.EkikritTheme
+import com.example.ui.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -40,6 +44,7 @@ fun ScholarshipsScreen(
     onApplyScheme: (String, Double?) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val strings = LocalAppStrings.current
     var selectedFilter by remember { mutableStateOf("ALL") }
     var selectedSchemeForWizard by remember { mutableStateOf<SchemeEntity?>(null) }
 
@@ -102,21 +107,23 @@ fun ScholarshipsScreen(
                                 shape = RoundedCornerShape(6.dp)
                             ) {
                                 Text(
-                                    text = "Ministry of Tribal Affairs (MoTA)",
+                                    text = strings.ministryName,
                                     style = MaterialTheme.typography.labelSmall,
                                     fontWeight = FontWeight.Bold,
                                     color = Color(0xFFD97706),
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
                                 )
                             }
                             Spacer(modifier = Modifier.height(6.dp))
                             Text(
-                                text = "5 National Tribal Scholarships",
+                                text = strings.schemesHeaderTitle,
                                 style = MaterialTheme.typography.titleLarge,
                                 fontWeight = FontWeight.Bold
                             )
                             Text(
-                                text = "Unified 1-click eligibility matching across all central and state tribal schemes.",
+                                text = strings.schemesHeaderSubtitle,
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -160,10 +167,10 @@ fun ScholarshipsScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 val filters = listOf(
-                    "ALL" to "All Schemes (5)",
-                    "ELIGIBLE" to "Eligible for Me",
-                    "APPLIED" to "Applied (${applications.size})",
-                    "NEEDS_ATTENTION" to "Needs Attention"
+                    "ALL" to "${strings.filterAll} (5)",
+                    "ELIGIBLE" to strings.filterEligible,
+                    "APPLIED" to "${strings.filterApplied} (${applications.size})",
+                    "NEEDS_ATTENTION" to strings.filterNeedsAttention
                 )
 
                 items(filters) { (key, label) ->
@@ -175,7 +182,8 @@ fun ScholarshipsScreen(
                             selectedContainerColor = MaterialTheme.colorScheme.primary,
                             selectedLabelColor = MaterialTheme.colorScheme.onPrimary
                         ),
-                        shape = RoundedCornerShape(8.dp)
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.heightIn(min = 40.dp)
                     )
                 }
             }
@@ -208,6 +216,10 @@ fun SchemeOpportunityCard(
     onApply: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val strings = LocalAppStrings.current
+    val localizedSchemeName = localizeSchemeName(strings, scheme.code, scheme.name)
+    val localizedSchemeDesc = localizeSchemeDesc(strings, scheme.code, scheme.description)
+
     Card(
         modifier = modifier
             .fillMaxWidth()
@@ -247,12 +259,13 @@ fun SchemeOpportunityCard(
 
                 if (existingApplication != null) {
                     val badgeColor = if (existingApplication.hasDiscrepancy) Color(0xFFD97706) else Color(0xFF059669)
+                    val stageText = localizeStage(strings, existingApplication.currentStage)
                     Surface(
                         color = badgeColor.copy(alpha = 0.15f),
                         shape = RoundedCornerShape(6.dp)
                     ) {
                         Text(
-                            text = if (existingApplication.hasDiscrepancy) "Reviewing Exception" else existingApplication.currentStage.replace("_", " "),
+                            text = if (existingApplication.hasDiscrepancy) "Reviewing Exception" else stageText,
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Bold,
                             color = badgeColor,
@@ -283,17 +296,21 @@ fun SchemeOpportunityCard(
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = scheme.name,
+                text = localizedSchemeName,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
             )
 
             Text(
-                text = scheme.description,
+                text = localizedSchemeDesc,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 4.dp, bottom = 12.dp)
+                modifier = Modifier.padding(top = 4.dp, bottom = 12.dp),
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis
             )
 
             // Key Highlights: Grant Amount & Deadline
@@ -310,7 +327,7 @@ fun SchemeOpportunityCard(
                 }
 
                 Column(horizontalAlignment = Alignment.End) {
-                    Text("Portal Deadline", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(strings.deadlineDate, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Text(scheme.deadline, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
                 }
             }
@@ -329,29 +346,34 @@ fun SchemeOpportunityCard(
                     Text(
                         text = eligibility.summaryRecommendation,
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
             }
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            // Action Button
+            // Action Button (min 48dp)
             if (existingApplication != null) {
                 Button(
                     onClick = onViewApplication,
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 48.dp),
                     shape = RoundedCornerShape(10.dp)
                 ) {
                     Icon(Icons.Default.Timeline, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Track 6-Stage Lifecycle (${existingApplication.currentStage.replace("_", " ")})")
+                    Text("${strings.trackStatusTab} (${localizeStage(strings, existingApplication.currentStage)})")
                 }
             } else {
                 Button(
                     onClick = onApply,
                     modifier = Modifier
                         .fillMaxWidth()
+                        .heightIn(min = 48.dp)
                         .testTag("apply_scheme_btn_${scheme.id}"),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = if (eligibility?.status == EligibilityStatus.ELIGIBLE) MaterialTheme.colorScheme.primary else Color(0xFF475569)
@@ -360,9 +382,24 @@ fun SchemeOpportunityCard(
                 ) {
                     Icon(Icons.Default.Bolt, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Apply in 1 Click (Pre-attached DigiLocker)")
+                    Text(strings.applyNow)
                 }
             }
         }
+    }
+}
+
+@Preview(name = "Scholarships 360x640", widthDp = 360, heightDp = 640)
+@Composable
+fun ScholarshipsScreenPreview() {
+    EkikritTheme {
+        ScholarshipsScreen(
+            student = null,
+            schemes = emptyList(),
+            applications = emptyList(),
+            documents = emptyList(),
+            onSelectApplication = {},
+            onApplyScheme = { _, _ -> }
+        )
     }
 }

@@ -15,8 +15,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.data.model.ReviewQueueEntity
+import com.example.ui.theme.EkikritTheme
+import com.example.ui.util.*
 
 @Composable
 fun ReviewerDeskScreen(
@@ -27,6 +31,7 @@ fun ReviewerDeskScreen(
     onSwitchToReviewer: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
+    val strings = LocalAppStrings.current
     var selectedFilter by remember { mutableStateOf("PENDING") }
 
     val filteredItems by remember(reviewItems, selectedFilter) {
@@ -62,7 +67,10 @@ fun ReviewerDeskScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.weight(1f)
+                        ) {
                             Surface(
                                 color = Color(0xFFD97706),
                                 shape = CircleShape,
@@ -78,17 +86,21 @@ fun ReviewerDeskScreen(
                                 }
                             }
                             Spacer(modifier = Modifier.width(10.dp))
-                            Column {
+                            Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = "Verification Reviewer Desk",
+                                    text = strings.reviewerDeskTitle,
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Bold,
-                                    color = Color.White
+                                    color = Color.White,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
                                 )
                                 Text(
-                                    text = "District Tribal Welfare Officer (Desk #4) • Sundargarh, Odisha",
+                                    text = strings.reviewerDeskSubtitle,
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = Color(0xFF94A3B8)
+                                    color = Color(0xFF94A3B8),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
                                 )
                             }
                         }
@@ -99,7 +111,7 @@ fun ReviewerDeskScreen(
                             shape = RoundedCornerShape(8.dp),
                             contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp)
                         ) {
-                            Text("← Student View", style = MaterialTheme.typography.labelSmall, color = Color.White)
+                            Text("← Student", style = MaterialTheme.typography.labelSmall, color = Color.White)
                         }
                     }
 
@@ -163,7 +175,8 @@ fun ReviewerDeskScreen(
                         Button(
                             onClick = onSwitchToReviewer,
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFDC2626)),
-                            shape = RoundedCornerShape(8.dp)
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.heightIn(min = 48.dp)
                         ) {
                             Text("Switch to Reviewing Officer Role (Demo)", style = MaterialTheme.typography.labelMedium)
                         }
@@ -188,7 +201,8 @@ fun ReviewerDeskScreen(
                     colors = FilterChipDefaults.filterChipColors(
                         selectedContainerColor = Color(0xFFFEF3C7),
                         selectedLabelColor = Color(0xFF92400E)
-                    )
+                    ),
+                    modifier = Modifier.heightIn(min = 40.dp)
                 )
 
                 FilterChip(
@@ -200,7 +214,8 @@ fun ReviewerDeskScreen(
                     colors = FilterChipDefaults.filterChipColors(
                         selectedContainerColor = Color(0xFFECFDF5),
                         selectedLabelColor = Color(0xFF065F46)
-                    )
+                    ),
+                    modifier = Modifier.heightIn(min = 40.dp)
                 )
             }
             Spacer(modifier = Modifier.height(12.dp))
@@ -312,11 +327,13 @@ private fun ReviewItemCard(
             val isCategoryCheck = item.fieldName.contains("Category", ignoreCase = true) ||
                     item.fieldName.contains("PVTG", ignoreCase = true) ||
                     item.fieldName.contains("Caste", ignoreCase = true)
-            
+
             Text(
                 text = "Case Reference: ${if (item.applicationId.isNotBlank()) item.applicationId else "APP-CASE-${item.id.takeLast(6)}"}",
                 style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
             if (isCategoryCheck && item.category.isNotBlank()) {
                 Text(
@@ -329,7 +346,9 @@ private fun ReviewItemCard(
                 text = "Disputed Parameter: ${item.fieldName} | Scheme: ${item.schemeName}",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.primary,
-                fontWeight = FontWeight.SemiBold
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
             )
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -465,6 +484,7 @@ private fun ReviewItemCard(
                         shape = RoundedCornerShape(10.dp),
                         modifier = Modifier
                             .weight(1.3f)
+                            .heightIn(min = 48.dp)
                             .testTag("approve_exception_btn"),
                         enabled = isReviewerRole
                     ) {
@@ -478,6 +498,7 @@ private fun ReviewItemCard(
                         shape = RoundedCornerShape(10.dp),
                         modifier = Modifier
                             .weight(1f)
+                            .heightIn(min = 48.dp)
                             .testTag("request_resubmit_btn"),
                         enabled = isReviewerRole
                     ) {
@@ -488,12 +509,26 @@ private fun ReviewItemCard(
                 Spacer(modifier = Modifier.height(12.dp))
                 FilledTonalButton(
                     onClick = onSwitchBack,
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 48.dp),
                     shape = RoundedCornerShape(10.dp)
                 ) {
                     Text("Return to Student Dashboard to Verify Live Update →")
                 }
             }
         }
+    }
+}
+
+@Preview(name = "Reviewer Desk 360x640", widthDp = 360, heightDp = 640)
+@Composable
+fun ReviewerDeskScreenPreview() {
+    EkikritTheme {
+        ReviewerDeskScreen(
+            reviewItems = emptyList(),
+            onResolve = { _, _, _ -> },
+            onBackToStudentView = {}
+        )
     }
 }

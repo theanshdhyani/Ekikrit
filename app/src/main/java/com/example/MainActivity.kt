@@ -35,9 +35,17 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        try {
+            // Lock to portrait for the demo
+            requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+        } catch (e: Throwable) {
+            // Securely ignore orientation setting on platforms/devices where it's restricted (e.g. translucent activities)
+        }
         setContent {
-            EkikritTheme {
-                EkikritMainApp()
+            val viewModel: EkikritViewModel = viewModel()
+            val selectedLanguage by viewModel.selectedLanguage.collectAsStateWithLifecycle()
+            EkikritTheme(language = selectedLanguage) {
+                EkikritMainApp(viewModel = viewModel)
             }
         }
     }
@@ -71,6 +79,8 @@ fun EkikritMainApp(
     val userNotice by viewModel.userNotice.collectAsStateWithLifecycle()
     val jagoMessages by viewModel.jagoMessages.collectAsStateWithLifecycle()
     val scholarshipMatch by viewModel.scholarshipMatch.collectAsStateWithLifecycle()
+    val ttsPlayState by viewModel.ttsPlayState.collectAsStateWithLifecycle()
+    val isJagoTyping by viewModel.isJagoTyping.collectAsStateWithLifecycle()
 
     val strings = getAppStrings(selectedLanguage)
 
@@ -362,7 +372,7 @@ fun EkikritMainApp(
                                     selected = currentTab == tab,
                                     onClick = { viewModel.selectTab(tab) },
                                     icon = { Icon(imageVector = icon, contentDescription = label) },
-                                    label = { Text(label, style = MaterialTheme.typography.labelSmall) },
+                                    label = { Text(label, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis) },
                                     modifier = Modifier.testTag("nav_tab_${tab.name}")
                                 )
                             }
@@ -381,10 +391,10 @@ fun EkikritMainApp(
                                             }
                                         }
                                     ) {
-                                        Icon(imageVector = Icons.Default.AdminPanelSettings, contentDescription = "Reviewer Desk")
+                                        Icon(imageVector = Icons.Default.AdminPanelSettings, contentDescription = strings.tabReviewDesk)
                                     }
                                 },
-                                label = { Text("Pending Review Queue ($pendingReviewCount)", style = MaterialTheme.typography.labelSmall) },
+                                label = { Text(strings.tabReviewDesk, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis) },
                                 modifier = Modifier.testTag("nav_tab_officer_review")
                             )
                         }
@@ -445,7 +455,10 @@ fun EkikritMainApp(
                                 onOpenConsentDialog = { viewModel.toggleConsentDialog(true) },
                                 onOpenSecurityModal = { showSecurityModal = true },
                                 onOpenIntroTour = { showIntroTour = true },
-                                onOpenLoginSheet = { viewModel.toggleLoginSheet(true) }
+                                onOpenLoginSheet = { viewModel.toggleLoginSheet(true) },
+                                playState = ttsPlayState,
+                                onPlayNarration = { viewModel.speakNarration(it) },
+                                onStopNarration = { viewModel.stopNarration() }
                             )
                         }
                         AppTab.SCHEMES -> {
@@ -516,6 +529,8 @@ fun EkikritMainApp(
             JagoChatModal(
                 messages = jagoMessages,
                 currentLanguage = selectedLanguage,
+                isTyping = isJagoTyping,
+                onSpeakMessage = { viewModel.speakNarration(it) },
                 onLanguageSelect = { viewModel.setLanguage(it) },
                 onSendMessage = { viewModel.sendJagoQuery(it) },
                 onDismiss = { viewModel.toggleJagoChat(false) }

@@ -21,10 +21,14 @@ import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.data.model.ApplicationEntity
 import com.example.data.model.DisbursementEntity
 import com.example.data.model.StudentEntity
+import com.example.ui.theme.EkikritTheme
+import com.example.ui.util.*
 
 @Composable
 fun DisbursementScreen(
@@ -33,6 +37,7 @@ fun DisbursementScreen(
     applications: List<ApplicationEntity>,
     modifier: Modifier = Modifier
 ) {
+    val strings = LocalAppStrings.current
     val totalDisbursed = disbursements.sumOf { it.amount }
     val pendingApplications = applications.filter { it.currentStage in listOf("UNDER_VERIFICATION", "SANCTIONED") }
     val totalPendingAmount = pendingApplications.sumOf { it.sanctionedAmount }
@@ -63,17 +68,21 @@ fun DisbursementScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Column {
+                        Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "Scholarship DBT Tracker",
+                                text = strings.dbtDisbursementsTitle,
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
+                                color = MaterialTheme.colorScheme.onSurface,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
                             Text(
                                 text = "PFMS Direct Benefit Transfer Rail • Section 7 Aadhaar Act",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
                         }
                         Surface(
@@ -116,10 +125,12 @@ fun DisbursementScreen(
                                     )
                                     Spacer(modifier = Modifier.width(6.dp))
                                     Text(
-                                        text = "Total Received",
+                                        text = strings.totalDisbursedLabel,
                                         style = MaterialTheme.typography.labelSmall,
                                         fontWeight = FontWeight.SemiBold,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
                                     )
                                 }
                                 Spacer(modifier = Modifier.height(4.dp))
@@ -127,7 +138,9 @@ fun DisbursementScreen(
                                     text = "₹${"%,.0f".format(totalDisbursed)}",
                                     style = MaterialTheme.typography.titleLarge,
                                     fontWeight = FontWeight.ExtraBold,
-                                    color = Color(0xFF059669)
+                                    color = Color(0xFF059669),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
                                 )
                                 Spacer(modifier = Modifier.height(2.dp))
                                 Text(
@@ -155,10 +168,12 @@ fun DisbursementScreen(
                                     )
                                     Spacer(modifier = Modifier.width(6.dp))
                                     Text(
-                                        text = "In Processing",
+                                        text = strings.inPipelineLabel,
                                         style = MaterialTheme.typography.labelSmall,
                                         fontWeight = FontWeight.SemiBold,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
                                     )
                                 }
                                 Spacer(modifier = Modifier.height(4.dp))
@@ -166,11 +181,13 @@ fun DisbursementScreen(
                                     text = "₹${"%,.0f".format(totalPendingAmount)}",
                                     style = MaterialTheme.typography.titleLarge,
                                     fontWeight = FontWeight.ExtraBold,
-                                    color = MaterialTheme.colorScheme.primary
+                                    color = MaterialTheme.colorScheme.primary,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
                                 )
                                 Spacer(modifier = Modifier.height(2.dp))
                                 Text(
-                                    text = "${pendingApplications.size} schemes advancing",
+                                    text = "${pendingApplications.size} advancing",
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -211,12 +228,16 @@ fun DisbursementScreen(
                                     text = "Aadhaar-Linked Direct Deposit Bank",
                                     style = MaterialTheme.typography.labelMedium,
                                     fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSurface
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
                                 )
                                 Text(
                                     text = "${student?.bankAccountMasked ?: "Canara Bank ending in **2845"} • IFSC: ${student?.ifscCode ?: "CNRB0002845"}",
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
                                 )
                             }
                             Surface(
@@ -238,24 +259,28 @@ fun DisbursementScreen(
             Spacer(modifier = Modifier.height(18.dp))
         }
 
-        // Section Title: Estimated Upcoming Disbursements (Student Friendly & High Contrast)
+        // Section Title: Estimated Upcoming Disbursements
         item {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column {
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "Estimated Upcoming Disbursements",
+                        text = strings.upcomingDisbursementsTitle,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                     Text(
                         text = "Real-time government sanction & bank payment schedule",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
                 Surface(
@@ -276,6 +301,7 @@ fun DisbursementScreen(
 
         // List of Pending / Upcoming Disbursements
         items(pendingApplications, key = { it.id }) { app ->
+            val localizedSchemeName = localizeSchemeName(strings, app.schemeCode, app.schemeName)
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -299,10 +325,12 @@ fun DisbursementScreen(
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = app.schemeName,
+                                text = localizedSchemeName,
                                 style = MaterialTheme.typography.titleSmall,
                                 fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
+                                color = MaterialTheme.colorScheme.onSurface,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis
                             )
                             Text(
                                 text = "App ID: ${app.id} • ${app.schemeCode}",
@@ -311,7 +339,7 @@ fun DisbursementScreen(
                             )
                         }
 
-                        // Status / Expected Arrival Pill with guaranteed readability
+                        // Status / Expected Arrival Pill
                         Surface(
                             color = if (app.hasDiscrepancy) Color(0xFFD97706).copy(alpha = 0.15f) else Color(0xFF2563EB).copy(alpha = 0.15f),
                             shape = RoundedCornerShape(8.dp),
@@ -380,7 +408,7 @@ fun DisbursementScreen(
 
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    // Mini Step Tracker for Disbursement (Student friendly)
+                    // Mini Step Tracker
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
@@ -421,7 +449,7 @@ fun DisbursementScreen(
 
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    // Student Reassurance Note Container (High contrast, clearly styled)
+                    // Student Reassurance Note Container
                     Surface(
                         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.65f),
                         shape = RoundedCornerShape(10.dp),
@@ -461,17 +489,21 @@ fun DisbursementScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column {
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "Completed Credit Transactions",
+                        text = strings.completedDisbursementsTitle,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                     Text(
                         text = "Official digital passbook entries from PFMS",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
                 Surface(
@@ -508,7 +540,10 @@ fun DisbursementScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.weight(1f)
+                        ) {
                             Surface(
                                 color = Color(0xFF10B981).copy(alpha = 0.15f),
                                 shape = CircleShape,
@@ -524,17 +559,21 @@ fun DisbursementScreen(
                                 }
                             }
                             Spacer(modifier = Modifier.width(10.dp))
-                            Column {
+                            Column(modifier = Modifier.weight(1f)) {
                                 Text(
                                     text = item.schemeName,
                                     style = MaterialTheme.typography.titleSmall,
                                     fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSurface
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
                                 )
                                 Text(
                                     text = "Credited on ${item.date}",
                                     style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
                                 )
                             }
                         }
@@ -556,11 +595,13 @@ fun DisbursementScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Column {
+                        Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 text = "Account: ${item.bankName} (${item.accountMasked})",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
@@ -619,7 +660,10 @@ fun DisbursementScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.weight(1f)
+                        ) {
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.HelpOutline,
                                 contentDescription = null,
@@ -631,7 +675,9 @@ fun DisbursementScreen(
                                 text = "Student Guide: How Scholarship DBT Works",
                                 style = MaterialTheme.typography.labelMedium,
                                 fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
+                                color = MaterialTheme.colorScheme.onSurface,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
                         }
                         Icon(
@@ -664,5 +710,17 @@ fun DisbursementScreen(
                 }
             }
         }
+    }
+}
+
+@Preview(name = "Disbursements 360x640", widthDp = 360, heightDp = 640)
+@Composable
+fun DisbursementScreenPreview() {
+    EkikritTheme {
+        DisbursementScreen(
+            student = null,
+            disbursements = emptyList(),
+            applications = emptyList()
+        )
     }
 }

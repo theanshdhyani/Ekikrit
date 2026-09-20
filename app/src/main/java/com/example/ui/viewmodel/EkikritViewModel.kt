@@ -1,13 +1,18 @@
 package com.example.ui.viewmodel
 
 import android.app.Application
+import android.content.Context
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.domain.EligibilityEngine
-import com.example.domain.EligibilityEvaluation
 import com.example.data.local.EkikritDatabase
 import com.example.data.model.*
 import com.example.data.repository.EkikritRepository
+import com.example.domain.EligibilityEngine
+import com.example.domain.EligibilityEvaluation
+import com.example.ui.util.AppStrings
+import com.example.ui.util.TtsPlayState
+import com.example.ui.util.VoiceAssistHelper
+import com.example.ui.util.getAppStrings
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
@@ -26,7 +31,10 @@ enum class UserMode {
 
 class EkikritViewModel(application: Application) : AndroidViewModel(application) {
 
+    private val prefs = application.getSharedPreferences("ekikrit_prefs", Context.MODE_PRIVATE)
+
     val repository: EkikritRepository
+    val voiceAssistHelper: VoiceAssistHelper = VoiceAssistHelper(application)
 
     init {
         val db = EkikritDatabase.getDatabase(application, viewModelScope)
@@ -106,11 +114,38 @@ class EkikritViewModel(application: Application) : AndroidViewModel(application)
     private val _selectedApplicationId = MutableStateFlow<String?>(null)
     val selectedApplicationId: StateFlow<String?> = _selectedApplicationId.asStateFlow()
 
-    private val _selectedLanguage = MutableStateFlow(AppLanguage.ENGLISH)
+    private val _selectedSchemeDetailId = MutableStateFlow<String?>(null)
+    val selectedSchemeDetailId: StateFlow<String?> = _selectedSchemeDetailId.asStateFlow()
+
+    // Load saved language or default to English
+    private val _selectedLanguage = MutableStateFlow(
+        run {
+            val savedCode = prefs.getString("selected_language_code", "en") ?: "en"
+            AppLanguage.values().firstOrNull { it.code == savedCode } ?: AppLanguage.ENGLISH
+        }
+    )
     val selectedLanguage: StateFlow<AppLanguage> = _selectedLanguage.asStateFlow()
 
     private val _isJagoChatOpen = MutableStateFlow(false)
     val isJagoChatOpen: StateFlow<Boolean> = _isJagoChatOpen.asStateFlow()
+
+    private val _isJagoTyping = MutableStateFlow(false)
+    val isJagoTyping: StateFlow<Boolean> = _isJagoTyping.asStateFlow()
+
+    private val _showIntroTour = MutableStateFlow(prefs.getBoolean("show_intro_tour_v1", true))
+    val showIntroTour: StateFlow<Boolean> = _showIntroTour.asStateFlow()
+
+    private val _showLanguageDialog = MutableStateFlow(false)
+    val showLanguageDialog: StateFlow<Boolean> = _showLanguageDialog.asStateFlow()
+
+    private val _showSecurityDialog = MutableStateFlow(false)
+    val showSecurityDialog: StateFlow<Boolean> = _showSecurityDialog.asStateFlow()
+
+    private val _showAuditDialog = MutableStateFlow(false)
+    val showAuditDialog: StateFlow<Boolean> = _showAuditDialog.asStateFlow()
+
+    private val _showShareDialog = MutableStateFlow(false)
+    val showShareDialog: StateFlow<Boolean> = _showShareDialog.asStateFlow()
 
     private val _showConsentDialog = MutableStateFlow(false)
     val showConsentDialog: StateFlow<Boolean> = _showConsentDialog.asStateFlow()
@@ -120,6 +155,9 @@ class EkikritViewModel(application: Application) : AndroidViewModel(application)
 
     private val _showNotificationsSheet = MutableStateFlow(false)
     val showNotificationsSheet: StateFlow<Boolean> = _showNotificationsSheet.asStateFlow()
+
+    private val _showScholarshipWizard = MutableStateFlow(false)
+    val showScholarshipWizard: StateFlow<Boolean> = _showScholarshipWizard.asStateFlow()
 
     private val _isSimulatingVerification = MutableStateFlow(false)
     val isSimulatingVerification: StateFlow<Boolean> = _isSimulatingVerification.asStateFlow()
@@ -132,11 +170,13 @@ class EkikritViewModel(application: Application) : AndroidViewModel(application)
             JagoMessage(
                 sender = "JAGO",
                 content = "Johar! I am JAGO, your unified tribal scholarship assistant. How can I assist you with your 5 tribal schemes, multi-system verification, or DigiLocker credentials today?",
-                quickChips = listOf("What is my application status?", "Why is my income flagged?", "Am I eligible for Top Class?", "When will amount disburse?")
+                quickChips = listOf("Application Status", "Why was income flagged?", "Am I eligible for Top Class?", "When will amount disburse?")
             )
         )
     )
     val jagoMessages: StateFlow<List<JagoMessage>> = _jagoMessages.asStateFlow()
+
+    val ttsPlayState: StateFlow<TtsPlayState> = voiceAssistHelper.playState
 
     fun selectTab(tab: AppTab) {
         _currentTab.value = tab
@@ -167,6 +207,14 @@ class EkikritViewModel(application: Application) : AndroidViewModel(application)
         _selectedApplicationId.value = null
     }
 
+    fun openSchemeDetail(schemeId: String) {
+        _selectedSchemeDetailId.value = schemeId
+    }
+
+    fun closeSchemeDetail() {
+        _selectedSchemeDetailId.value = null
+    }
+
     fun toggleJagoChat(open: Boolean? = null) {
         _isJagoChatOpen.value = open ?: !_isJagoChatOpen.value
     }
@@ -183,9 +231,39 @@ class EkikritViewModel(application: Application) : AndroidViewModel(application)
         _showNotificationsSheet.value = show
     }
 
+    fun toggleLanguageDialog(show: Boolean) {
+        _showLanguageDialog.value = show
+    }
+
+    fun toggleSecurityDialog(show: Boolean) {
+        _showSecurityDialog.value = show
+    }
+
+    fun toggleAuditDialog(show: Boolean) {
+        _showAuditDialog.value = show
+    }
+
+    fun toggleShareDialog(show: Boolean) {
+        _showShareDialog.value = show
+    }
+
+    fun toggleScholarshipWizard(show: Boolean) {
+        _showScholarshipWizard.value = show
+    }
+
+    fun dismissIntroTour() {
+        _showIntroTour.value = false
+        prefs.edit().putBoolean("show_intro_tour_v1", false).apply()
+    }
+
+    fun replayIntroTour() {
+        _showIntroTour.value = true
+    }
+
     fun toggleOfflineMode(offline: Boolean) {
         repository.setOfflineMode(offline)
-        _userNotice.value = if (offline) "Offline mode simulated. Changes will queue locally." else "Back online! Syncing queued applications with national servers."
+        val strings = getAppStrings(_selectedLanguage.value)
+        _userNotice.value = if (offline) strings.offlineBannerTitle else "Back online! Auto-sync complete."
     }
 
     fun switchStudent(studentId: String) {
@@ -227,6 +305,8 @@ class EkikritViewModel(application: Application) : AndroidViewModel(application)
 
     fun setLanguage(lang: AppLanguage) {
         _selectedLanguage.value = lang
+        prefs.edit().putString("selected_language_code", lang.code).apply()
+        _showLanguageDialog.value = false
     }
 
     fun clearNotice() {
@@ -257,6 +337,7 @@ class EkikritViewModel(application: Application) : AndroidViewModel(application)
         viewModelScope.launch {
             val (success, msg) = repository.applyForScheme(schemeId, declaredIncome)
             _userNotice.value = msg
+            _showScholarshipWizard.value = false
         }
     }
 
@@ -292,6 +373,7 @@ class EkikritViewModel(application: Application) : AndroidViewModel(application)
 
     fun resetDemoData() {
         viewModelScope.launch {
+            voiceAssistHelper.stop()
             repository.resetAllDemoData()
             _userNotice.value = "Demo database reset to clean default state."
         }
@@ -303,19 +385,60 @@ class EkikritViewModel(application: Application) : AndroidViewModel(application)
             content = query
         )
         _jagoMessages.value = _jagoMessages.value + userMsg
+        _isJagoTyping.value = true
 
         viewModelScope.launch {
-            val responseText = repository.generateJagoResponse(query)
-            val jagoResponse = JagoMessage(
-                sender = "JAGO",
-                content = responseText,
-                quickChips = listOf("Check my DBT payment", "Explain income tolerance", "View 5 Schemes")
-            )
-            _jagoMessages.value = _jagoMessages.value + jagoResponse
+            try {
+                val jagoResponse = repository.generateJagoResponse(query, _selectedLanguage.value.code)
+                _jagoMessages.value = _jagoMessages.value + jagoResponse
+            } catch (e: Exception) {
+                val errStrings = getAppStrings(_selectedLanguage.value)
+                val errMessage = JagoMessage(
+                    sender = "JAGO",
+                    content = "Unable to process query at this time. Please retry.",
+                    quickChips = listOf(errStrings.jagoChipStatus, errStrings.jagoChipEligible, errStrings.jagoChipPayment)
+                )
+                _jagoMessages.value = _jagoMessages.value + errMessage
+            } finally {
+                _isJagoTyping.value = false
+            }
         }
+    }
+
+    fun speakScreenSummary(summaryText: String? = null) {
+        val strings = getAppStrings(_selectedLanguage.value)
+        val textToSpeak = summaryText ?: when (_currentTab.value) {
+            AppTab.DASHBOARD -> "${strings.welcomePrefix}, ${student.value?.name ?: "Student"}. ${strings.nspPfmsActive}. ${strings.activeApplicationsTitle}."
+            AppTab.SCHEMES -> "${strings.schemesHeaderTitle}. ${strings.schemesHeaderSubtitle}."
+            AppTab.DOCUMENTS -> "${strings.digiLockerWalletTitle}. ${strings.attachedCredentialsTitle}."
+            AppTab.DISBURSEMENT -> "${strings.dbtTrackerTitle}. ${strings.dbtCurrentTrancheTitle}."
+            AppTab.REVIEWER_QUEUE -> "${strings.reviewerTitle}. ${strings.reviewerSubtitle}."
+        }
+
+        val success = voiceAssistHelper.speak(textToSpeak, _selectedLanguage.value)
+        if (!success && voiceAssistHelper.playState.value == TtsPlayState.UNAVAILABLE) {
+            _userNotice.value = strings.voiceAssistUnavailable
+        }
+    }
+
+    fun stopVoice() {
+        voiceAssistHelper.stop()
+    }
+
+    fun speakNarration(summaryText: String? = null) {
+        speakScreenSummary(summaryText)
+    }
+
+    fun stopNarration() {
+        stopVoice()
     }
 
     fun getVerificationRecordsForAppFlow(appId: String): Flow<List<VerificationRecordEntity>> {
         return repository.getVerificationRecordsForAppFlow(appId)
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        voiceAssistHelper.shutdown()
     }
 }

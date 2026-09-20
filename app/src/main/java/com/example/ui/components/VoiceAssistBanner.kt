@@ -24,16 +24,22 @@ import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.example.ui.util.LocalAppStrings
+import com.example.ui.util.TtsPlayState
 
 @Composable
 fun VoiceAssistBanner(
     isVoiceAssistEnabled: Boolean,
     onToggleVoiceAssist: (Boolean) -> Unit,
-    spokenNarration: String = "Welcome! You have 1 verified scholarship ready for DBT disbursement and 1 eligible scheme waiting for 1-click application.",
+    playState: TtsPlayState = TtsPlayState.IDLE,
+    spokenNarration: String = "",
     onPlayNarration: () -> Unit = {},
+    onStopNarration: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    var isPlaying by remember { mutableStateOf(false) }
+    val strings = LocalAppStrings.current
+    val isPlaying = playState == TtsPlayState.PLAYING
+    val defaultNarration = spokenNarration.ifBlank { strings.voiceAssistSummaryDefault }
 
     Card(
         modifier = modifier
@@ -61,9 +67,11 @@ fun VoiceAssistBanner(
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.semantics {
-                        contentDescription = "Voice Assist and Audio Accessibility Mode toggle"
-                    }
+                    modifier = Modifier
+                        .weight(1f)
+                        .semantics {
+                            contentDescription = strings.voiceAssistTitle
+                        }
                 ) {
                     Surface(
                         color = if (isVoiceAssistEnabled) Color(0xFFD97706) else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f),
@@ -80,15 +88,15 @@ fun VoiceAssistBanner(
                         }
                     }
                     Spacer(modifier = Modifier.width(10.dp))
-                    Column {
+                    Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "Voice Assist Mode",
+                            text = strings.voiceAssistTitle,
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.Bold,
                             color = if (isVoiceAssistEnabled) Color(0xFF92400E) else MaterialTheme.colorScheme.onSurface
                         )
                         Text(
-                            text = if (isVoiceAssistEnabled) "Spoken guidance active (Tribal & Plain Language)" else "Tap switch to enable audio assistance",
+                            text = if (isVoiceAssistEnabled) strings.voiceAssistActiveSubtitle else strings.voiceAssistTapToEnable,
                             style = MaterialTheme.typography.labelSmall,
                             color = if (isVoiceAssistEnabled) Color(0xFFB45309) else MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -123,8 +131,11 @@ fun VoiceAssistBanner(
                     ) {
                         Button(
                             onClick = {
-                                isPlaying = !isPlaying
-                                onPlayNarration()
+                                if (isPlaying) {
+                                    onStopNarration()
+                                } else {
+                                    onPlayNarration()
+                                }
                             },
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = if (isPlaying) Color(0xFF059669) else Color(0xFFD97706)
@@ -134,7 +145,7 @@ fun VoiceAssistBanner(
                             modifier = Modifier
                                 .height(48.dp)
                                 .semantics {
-                                    contentDescription = if (isPlaying) "Pause audio narration" else "Listen to screen instructions aloud"
+                                    contentDescription = if (isPlaying) strings.voiceAssistPause else strings.voiceAssistListenAloud
                                 }
                         ) {
                             Icon(
@@ -145,7 +156,7 @@ fun VoiceAssistBanner(
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
-                                text = if (isPlaying) "Playing Audio..." else "Listen Aloud",
+                                text = if (isPlaying) strings.voiceAssistPlaying else strings.voiceAssistListenAloud,
                                 fontWeight = FontWeight.Bold,
                                 color = Color.White
                             )
@@ -157,7 +168,7 @@ fun VoiceAssistBanner(
                             VoiceWaveform(modifier = Modifier.weight(1f))
                         } else {
                             Text(
-                                text = "Speaks screen elements & steps clearly",
+                                text = strings.voiceAssistSpeaksDescription,
                                 style = MaterialTheme.typography.labelSmall,
                                 color = Color(0xFF78350F),
                                 modifier = Modifier.weight(1f)
@@ -166,7 +177,7 @@ fun VoiceAssistBanner(
                     }
 
                     Text(
-                        text = "🔊 \"$spokenNarration\"",
+                        text = "🔊 \"$defaultNarration\"",
                         style = MaterialTheme.typography.bodySmall,
                         fontWeight = FontWeight.Medium,
                         color = Color(0xFF92400E)

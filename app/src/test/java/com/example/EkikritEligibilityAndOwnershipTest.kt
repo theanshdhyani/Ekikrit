@@ -383,7 +383,7 @@ class EkikritEligibilityAndOwnershipTest {
         // Test Hindi response
         val hindiMsg = jago.generateResponse(
             query = "What is my application status?",
-            langCode = "hi",
+            currentAppLangCode = "hi",
             student = student,
             applications = listOf(app),
             pendingReviewCount = 1,
@@ -396,7 +396,7 @@ class EkikritEligibilityAndOwnershipTest {
         // Test Odia response
         val odiaMsg = jago.generateResponse(
             query = "status of application",
-            langCode = "or",
+            currentAppLangCode = "or",
             student = student,
             applications = listOf(app),
             pendingReviewCount = 1,
@@ -407,7 +407,7 @@ class EkikritEligibilityAndOwnershipTest {
         // Test Gondi response
         val gondiMsg = jago.generateResponse(
             query = "status",
-            langCode = "gon",
+            currentAppLangCode = "gon",
             student = student,
             applications = listOf(app),
             pendingReviewCount = 1,

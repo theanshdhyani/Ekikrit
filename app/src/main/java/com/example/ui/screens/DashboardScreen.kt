@@ -6,8 +6,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -24,17 +22,18 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.data.model.ApplicationEntity
 import com.example.data.model.DocumentEntity
 import com.example.data.model.SchemeEntity
 import com.example.data.model.StudentEntity
-import com.example.ui.components.DashboardSkeletonLoader
-import com.example.ui.components.OfflineErrorStateCard
 import com.example.ui.components.PendingActionsCard
 import com.example.ui.components.ScholarshipWizardModal
 import com.example.ui.components.VoiceAssistBanner
-import com.example.ui.util.LocalAppStrings
+import com.example.ui.theme.EkikritTheme
+import com.example.ui.util.*
 
 @Composable
 fun DashboardScreen(
@@ -50,15 +49,15 @@ fun DashboardScreen(
     onOpenSecurityModal: () -> Unit,
     onOpenIntroTour: () -> Unit,
     onOpenLoginSheet: () -> Unit = {},
-    topUnreachedScheme: com.example.domain.EligibilityEvaluation? = null,
+    playState: TtsPlayState = TtsPlayState.IDLE,
+    onPlayNarration: (String) -> Unit = {},
+    onStopNarration: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val strings = LocalAppStrings.current
-    var selectedFilter by remember { mutableStateOf("ALL") }
     var showOverflowMenu by remember { mutableStateOf(false) }
     var isVoiceAssistActive by remember { mutableStateOf(false) }
     var selectedSchemeForWizard by remember { mutableStateOf<SchemeEntity?>(null) }
-    var isOfflineSimulation by remember { mutableStateOf(false) }
 
     val firstName = remember(student?.name) {
         student?.name?.trim()?.split("\\s+".toRegex())?.firstOrNull()?.takeIf { it.isNotBlank() } ?: "Student"
@@ -83,8 +82,8 @@ fun DashboardScreen(
         applications.firstOrNull { it.currentStage != "DISBURSED" } ?: applications.firstOrNull()
     }
 
-    val spokenText = remember(firstName, eligibleSchemes, applications) {
-        "Johar $firstName! You have ${applications.size} active scholarship applications. ${eligibleSchemes.size} additional tribal schemes are open for 1-click application without paper re-upload."
+    val spokenText = remember(firstName, eligibleSchemes, applications, strings) {
+        "${strings.welcomePrefix} $firstName! ${strings.activeApplicationsTitle}: ${applications.size}. ${strings.nspPfmsActive}."
     }
 
     // Modal Wizard for 1-Click Application
@@ -114,10 +113,10 @@ fun DashboardScreen(
             VoiceAssistBanner(
                 isVoiceAssistEnabled = isVoiceAssistActive,
                 onToggleVoiceAssist = { isVoiceAssistActive = it },
+                playState = playState,
                 spokenNarration = spokenText,
-                onPlayNarration = {
-                    // Simulates immediate voice feedback
-                }
+                onPlayNarration = { onPlayNarration(spokenText) },
+                onStopNarration = onStopNarration
             )
         }
 
@@ -144,11 +143,13 @@ fun DashboardScreen(
                             shape = RoundedCornerShape(6.dp)
                         ) {
                             Text(
-                                text = "MINISTRY OF TRIBAL AFFAIRS",
+                                text = strings.ministryName.uppercase(),
                                 style = MaterialTheme.typography.labelSmall,
                                 fontWeight = FontWeight.Bold,
                                 color = Color.White,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
                         }
 
@@ -157,7 +158,7 @@ fun DashboardScreen(
                             IconButton(
                                 onClick = { showOverflowMenu = true },
                                 modifier = Modifier
-                                    .size(40.dp)
+                                    .size(44.dp)
                                     .testTag("dashboard_overflow_menu_btn")
                                     .semantics { contentDescription = "Options and Profile switcher menu" }
                             ) {
@@ -173,7 +174,7 @@ fun DashboardScreen(
                                 onDismissRequest = { showOverflowMenu = false }
                             ) {
                                 DropdownMenuItem(
-                                    text = { Text("Switch Student Profile") },
+                                    text = { Text(strings.switchUser) },
                                     leadingIcon = { Icon(Icons.Default.SwitchAccount, contentDescription = null, tint = Color(0xFFD97706)) },
                                     onClick = {
                                         showOverflowMenu = false
@@ -181,7 +182,7 @@ fun DashboardScreen(
                                     }
                                 )
                                 DropdownMenuItem(
-                                    text = { Text("App Tour & SIH Guide") },
+                                    text = { Text(strings.replayTourMenu) },
                                     leadingIcon = { Icon(Icons.AutoMirrored.Filled.HelpOutline, contentDescription = null, tint = Color(0xFF2563EB)) },
                                     onClick = {
                                         showOverflowMenu = false
@@ -189,7 +190,7 @@ fun DashboardScreen(
                                     }
                                 )
                                 DropdownMenuItem(
-                                    text = { Text("Security & Privacy (DPDP)") },
+                                    text = { Text(strings.securityMenu) },
                                     leadingIcon = { Icon(Icons.Default.Security, contentDescription = null, tint = Color(0xFF059669)) },
                                     onClick = {
                                         showOverflowMenu = false
@@ -226,7 +227,7 @@ fun DashboardScreen(
 
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "Welcome back,",
+                                text = strings.welcomePrefix,
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -234,12 +235,16 @@ fun DashboardScreen(
                                 text = firstName,
                                 style = MaterialTheme.typography.headlineMedium,
                                 fontWeight = FontWeight.ExtraBold,
-                                color = MaterialTheme.colorScheme.onSurface
+                                color = MaterialTheme.colorScheme.onSurface,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
                             Text(
                                 text = "${student?.name ?: "Student"} · ${student?.category ?: "ST"}",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
                         }
                     }
@@ -295,23 +300,23 @@ fun DashboardScreen(
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         StatMiniBox(
-                            label = "Disbursed",
-                            value = "₹4,500",
+                            label = strings.disbursedCardTitle,
+                            value = formatRupees(4500.0),
                             sub = "DBT Credited",
                             color = Color(0xFF059669),
                             modifier = Modifier.weight(1f)
                         )
                         StatMiniBox(
                             label = "In Pipeline",
-                            value = "₹78,000",
+                            value = formatRupees(78000.0),
                             sub = "Post-Matric ST",
                             color = Color(0xFF2563EB),
                             modifier = Modifier.weight(1f)
                         )
                         StatMiniBox(
-                            label = "Wallet",
-                            value = "5 Docs",
-                            sub = "DigiLocker Synced",
+                            label = strings.tabWallet,
+                            value = "${documents.size} Docs",
+                            sub = "DigiLocker",
                             color = Color(0xFFD97706),
                             modifier = Modifier.weight(1f)
                         )
@@ -330,7 +335,7 @@ fun DashboardScreen(
         }
 
         // ==========================================
-        // 1. CARD: "Eligible Scholarships" (Distinct Card)
+        // 1. CARD: "Eligible Scholarships"
         // ==========================================
         item {
             Card(
@@ -361,13 +366,13 @@ fun DashboardScreen(
                             Spacer(modifier = Modifier.width(10.dp))
                             Column {
                                 Text(
-                                    text = "Eligible Scholarships",
+                                    text = strings.eligibleSchemesTitle,
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onSurface
                                 )
                                 Text(
-                                    text = "Pre-qualified schemes for your tribal category",
+                                    text = strings.schemesHeaderSubtitle,
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -379,7 +384,7 @@ fun DashboardScreen(
                             shape = RoundedCornerShape(6.dp)
                         ) {
                             Text(
-                                text = "${eligibleSchemes.size.coerceAtLeast(1)} Available",
+                                text = "${eligibleSchemes.size} Available",
                                 style = MaterialTheme.typography.labelSmall,
                                 fontWeight = FontWeight.Bold,
                                 color = Color(0xFF059669),
@@ -408,6 +413,8 @@ fun DashboardScreen(
                         }
                     } else {
                         eligibleSchemes.forEach { scheme ->
+                            val localizedName = localizeSchemeName(strings, scheme.code, scheme.name)
+                            val localizedDesc = localizeSchemeDesc(strings, scheme.code, scheme.description)
                             Card(
                                 shape = RoundedCornerShape(14.dp),
                                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)),
@@ -421,9 +428,11 @@ fun DashboardScreen(
                                     ) {
                                         Column(modifier = Modifier.weight(1f)) {
                                             Text(
-                                                text = scheme.name,
+                                                text = localizedName,
                                                 style = MaterialTheme.typography.titleSmall,
-                                                fontWeight = FontWeight.Bold
+                                                fontWeight = FontWeight.Bold,
+                                                maxLines = 2,
+                                                overflow = TextOverflow.Ellipsis
                                             )
                                             Text(
                                                 text = "Grant: ${scheme.maxAmount}",
@@ -447,24 +456,26 @@ fun DashboardScreen(
                                     }
 
                                     Text(
-                                        text = scheme.description,
+                                        text = localizedDesc,
                                         style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        maxLines = 3,
+                                        overflow = TextOverflow.Ellipsis
                                     )
 
-                                    // Prominent Touch-friendly CTA Button (Min 48dp)
+                                    // Touch target minimum 48dp
                                     Button(
                                         onClick = { selectedSchemeForWizard = scheme },
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .height(48.dp)
+                                            .heightIn(min = 48.dp)
                                             .testTag("apply_wizard_btn_${scheme.code}"),
                                         shape = RoundedCornerShape(12.dp),
                                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF059669))
                                     ) {
                                         Icon(Icons.Default.FlashOn, contentDescription = null, modifier = Modifier.size(18.dp), tint = Color.White)
                                         Spacer(modifier = Modifier.width(6.dp))
-                                        Text("Apply via Wizard (1-Click)", fontWeight = FontWeight.Bold, color = Color.White)
+                                        Text(strings.applyNow, fontWeight = FontWeight.Bold, color = Color.White)
                                     }
                                 }
                             }
@@ -475,7 +486,7 @@ fun DashboardScreen(
         }
 
         // ==========================================
-        // 2. CARD: "My Applications" (Distinct Card)
+        // 2. CARD: "My Applications"
         // ==========================================
         item {
             Card(
@@ -506,13 +517,13 @@ fun DashboardScreen(
                             Spacer(modifier = Modifier.width(10.dp))
                             Column {
                                 Text(
-                                    text = "My Applications",
+                                    text = strings.activeApplicationsTitle,
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onSurface
                                 )
                                 Text(
-                                    text = "Active and approved submissions (${applications.size})",
+                                    text = "${applications.size} ${strings.activeApplicationsTitle}",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -535,7 +546,7 @@ fun DashboardScreen(
         }
 
         // ==========================================
-        // 3. CARD: "Track Status" (Distinct Card with Timeline)
+        // 3. CARD: "Track Status"
         // ==========================================
         item {
             Card(
@@ -566,13 +577,13 @@ fun DashboardScreen(
                             Spacer(modifier = Modifier.width(10.dp))
                             Column {
                                 Text(
-                                    text = "Track Status",
+                                    text = strings.liveApplicationStatus,
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onSurface
                                 )
                                 Text(
-                                    text = "Real-time lifecycle & DBT sanction progress",
+                                    text = strings.dbtPaymentsSubtitle,
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -597,12 +608,11 @@ fun DashboardScreen(
 
                     HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.15f))
 
-                    // 4-Stage Human-Friendly Timeline Tracker
                     val activeStage = latestAppForTracking?.currentStage ?: "UNDER_VERIFICATION"
                     val stageLevel = when (activeStage) {
                         "SUBMITTED" -> 1
-                        "UNDER_VERIFICATION" -> 2
-                        "SANCTIONED" -> 3
+                        "INSTITUTE_VERIFICATION", "UNDER_VERIFICATION" -> 2
+                        "STATE_VERIFICATION", "MINISTRY_REVIEW", "SANCTIONED" -> 3
                         "DISBURSED" -> 4
                         else -> 2
                     }
@@ -638,21 +648,20 @@ fun DashboardScreen(
                         )
                     }
 
-                    // Direct Action Button to view detailed audit trail
                     Button(
                         onClick = {
                             latestAppForTracking?.let { onSelectScheme(it.id) }
                         },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(48.dp)
+                            .heightIn(min = 48.dp)
                             .testTag("disbursement_track_btn"),
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD97706))
                     ) {
                         Icon(Icons.Default.Visibility, contentDescription = null, modifier = Modifier.size(18.dp), tint = Color.White)
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text("View Complete Verification Checklist", fontWeight = FontWeight.Bold, color = Color.White)
+                        Text(strings.verificationSummary, fontWeight = FontWeight.Bold, color = Color.White)
                     }
                 }
             }
@@ -744,18 +753,22 @@ fun CompactSchemeApplicationCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val (dotColor, badgeBg, friendlyStatus) = when (application.currentStage) {
-        "SUBMITTED" -> Triple(Color(0xFF2563EB), Color(0xFFEFF6FF), "Submitted • In Review")
+    val strings = LocalAppStrings.current
+    val localizedSchemeName = localizeSchemeName(strings, application.schemeCode, application.schemeName)
+    val localizedStage = localizeStage(strings, application.currentStage)
+
+    val (dotColor, badgeBg) = when (application.currentStage) {
+        "SUBMITTED" -> Pair(Color(0xFF2563EB), Color(0xFFEFF6FF))
         "INSTITUTE_VERIFICATION", "UNDER_VERIFICATION" -> if (application.hasDiscrepancy) {
-            Triple(Color(0xFFD97706), Color(0xFFFEF3C7), "Institute Review (Variance flagged)")
+            Pair(Color(0xFFD97706), Color(0xFFFEF3C7))
         } else {
-            Triple(Color(0xFF0284C7), Color(0xFFF0F9FF), "Institute Verification")
+            Pair(Color(0xFF0284C7), Color(0xFFF0F9FF))
         }
-        "STATE_VERIFICATION" -> Triple(Color(0xFF7C3AED), Color(0xFFF5F3FF), "State Verification")
-        "MINISTRY_REVIEW" -> Triple(Color(0xFFC026D3), Color(0xFFFDF4FF), "Ministry Review")
-        "SANCTIONED" -> Triple(Color(0xFF059669), Color(0xFFECFDF5), "Sanctioned • DBT Queued")
-        "DISBURSED" -> Triple(Color(0xFF16A34A), Color(0xFFF0FDF4), "Payment Disbursed")
-        else -> Triple(Color(0xFF9333EA), Color(0xFFFAF5FF), "Eligible to Claim")
+        "STATE_VERIFICATION" -> Pair(Color(0xFF7C3AED), Color(0xFFF5F3FF))
+        "MINISTRY_REVIEW" -> Pair(Color(0xFFC026D3), Color(0xFFFDF4FF))
+        "SANCTIONED" -> Pair(Color(0xFF059669), Color(0xFFECFDF5))
+        "DISBURSED" -> Pair(Color(0xFF16A34A), Color(0xFFF0FDF4))
+        else -> Pair(Color(0xFF9333EA), Color(0xFFFAF5FF))
     }
 
     Card(
@@ -779,7 +792,6 @@ fun CompactSchemeApplicationCard(
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                // Top line: Portal pill & Status pill
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
@@ -813,7 +825,7 @@ fun CompactSchemeApplicationCard(
                             )
                             Spacer(modifier = Modifier.width(5.dp))
                             Text(
-                                text = friendlyStatus,
+                                text = localizedStage,
                                 style = MaterialTheme.typography.labelSmall,
                                 fontWeight = FontWeight.Bold,
                                 color = if (application.hasDiscrepancy) Color(0xFF92400E) else dotColor
@@ -824,19 +836,19 @@ fun CompactSchemeApplicationCard(
 
                 Spacer(modifier = Modifier.height(6.dp))
 
-                // Scheme Name
                 Text(
-                    text = application.schemeName,
+                    text = localizedSchemeName,
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
 
                 Spacer(modifier = Modifier.height(2.dp))
 
-                // Grant amount & quick status
                 Text(
-                    text = "Grant: ${scheme?.maxAmount ?: "Government Aid"} • Tap to view",
+                    text = "Grant: ${scheme?.maxAmount ?: "Government Aid"}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -844,7 +856,6 @@ fun CompactSchemeApplicationCard(
 
             Spacer(modifier = Modifier.width(8.dp))
 
-            // Action Chevron
             Icon(
                 imageVector = Icons.Default.ChevronRight,
                 contentDescription = "View details",
@@ -852,5 +863,66 @@ fun CompactSchemeApplicationCard(
                 modifier = Modifier.size(20.dp)
             )
         }
+    }
+}
+
+// ==========================================
+// Phone-First Previews for Layout & Font-Scale Matrix
+// ==========================================
+
+@Preview(name = "Compact Phone 320x568", widthDp = 320, heightDp = 568)
+@Composable
+fun DashboardPreviewCompact() {
+    EkikritTheme {
+        DashboardScreen(
+            student = StudentEntity(
+                id = "STU_1",
+                name = "Birsa Munda",
+                dob = "15/11/2003",
+                aadhaarMasked = "XXXX-XXXX-8921",
+                mobile = "9876543210",
+                category = "ST",
+                pvtgCommunity = "Santhal",
+                institutionName = "National Institute of Technology, Rourkela",
+                institutionId = "AISHE-U-0355",
+                course = "B.Tech Computer Science",
+                academicLevel = "UNDERGRADUATE",
+                annualIncome = 210000.0,
+                state = "Odisha",
+                bankAccountMasked = "XXXX-XXXX-4512",
+                ifscCode = "SBIN0002109",
+                isDigiLockerLinked = true,
+                hasConsentGiven = true,
+                apaarId = "APAAR-9821-4512"
+            ),
+            applications = emptyList(),
+            schemes = emptyList(),
+            onSelectScheme = {},
+            onOpenReviewDesk = {},
+            onOpenJago = {},
+            onApplyUnreached = {},
+            onOpenConsentDialog = {},
+            onOpenSecurityModal = {},
+            onOpenIntroTour = {}
+        )
+    }
+}
+
+@Preview(name = "Standard Phone 360x640 - Large Font", widthDp = 360, heightDp = 640, fontScale = 1.3f)
+@Composable
+fun DashboardPreviewStandardLargeFont() {
+    EkikritTheme {
+        DashboardScreen(
+            student = null,
+            applications = emptyList(),
+            schemes = emptyList(),
+            onSelectScheme = {},
+            onOpenReviewDesk = {},
+            onOpenJago = {},
+            onApplyUnreached = {},
+            onOpenConsentDialog = {},
+            onOpenSecurityModal = {},
+            onOpenIntroTour = {}
+        )
     }
 }

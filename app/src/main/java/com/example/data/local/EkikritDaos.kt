@@ -160,6 +160,9 @@ interface ReviewQueueDao {
     @Query("SELECT * FROM review_queue WHERE status = 'PENDING' ORDER BY createdAt DESC")
     fun getPendingReviewItemsFlow(): Flow<List<ReviewQueueEntity>>
 
+    @Query("SELECT * FROM review_queue WHERE status = 'PENDING' ORDER BY createdAt DESC")
+    suspend fun getAllPending(): List<ReviewQueueEntity>
+
     @Query("SELECT * FROM review_queue WHERE studentId = :studentId ORDER BY createdAt DESC")
     fun getReviewItemsForStudentFlow(studentId: String): Flow<List<ReviewQueueEntity>>
 

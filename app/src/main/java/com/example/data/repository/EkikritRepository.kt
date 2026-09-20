@@ -544,110 +544,38 @@ class EkikritRepository(
         _activeStudentId.value = "STU_2026_01"
     }
 
+    private val jagoAiService = JagoAiService()
+
     /**
-     * Live State-Aware Dynamic JAGO AI Assistant
+     * Live State-Aware Multilingual JAGO AI Assistant
      */
-    suspend fun generateJagoResponse(userQuery: String): String = withContext(Dispatchers.IO) {
+    suspend fun generateJagoResponse(userQuery: String, languageCode: String = "en"): JagoMessage = withContext(Dispatchers.IO) {
         val currentStudentId = _activeStudentId.value
         val student = database.studentDao().getStudent(currentStudentId)
         val applications = database.applicationDao().getApplicationsForStudent(currentStudentId)
         val documents = database.documentDao().getDocumentsForStudent(currentStudentId)
         val disbursements = database.disbursementDao().getDisbursementsForStudent(currentStudentId)
         val schemes = database.schemeDao().getAllSchemes()
+        val reviewItems = database.reviewQueueDao().getAllPending()
 
-        val studentName = student?.name ?: "Student"
-        val q = userQuery.lowercase(Locale.ENGLISH)
+        val unappliedSchemes = schemes.filter { sc -> applications.none { it.schemeId == sc.id } }
+        val unclaimedEvaluations = if (student != null) {
+            unappliedSchemes.map { sc -> EligibilityEngine.evaluateEligibility(student, sc, applications) }
+        } else emptyList()
 
-        val prefix = if (_isOfflineMode.value) "⚡ [JAGO Offline Assistance Mode Active]\n\n" else ""
-
-        val response = when {
-            q.contains("status") || q.contains("application") || q.contains("track") -> {
-                if (applications.isEmpty()) {
-                    "Johar $studentName! You currently have no active scholarship applications. You can explore and apply for eligible schemes in the 5 Schemes tab."
-                } else {
-                    val appSummaries = applications.joinToString("\n• ") { app ->
-                        "${app.schemeName}: Current Stage is '${app.currentStage.replace("_", " ")}'. ${app.statusText}"
-                    }
-                    "Johar $studentName! Here is the live status of your applications:\n\n• $appSummaries"
-                }
-            }
-
-            q.contains("discrepancy") || q.contains("mismatch") || q.contains("income") || q.contains("issue") || q.contains("review") -> {
-                val appWithIssue = applications.find { it.hasDiscrepancy }
-                if (appWithIssue != null) {
-                    val records = database.verificationRecordDao().getRecordsForApp(appWithIssue.id)
-                    val mismatchRecord = records.find { it.status == "MISMATCH" }
-                    val reviewItem = database.reviewQueueDao().getByAppId(appWithIssue.id)
-
-                    val provider = mismatchRecord?.sourceSystem ?: "State Revenue Registry"
-                    val declared = mismatchRecord?.declaredValue ?: "Self-Declared"
-                    val retrieved = mismatchRecord?.retrievedValue ?: "Verified Record"
-                    val reason = mismatchRecord?.notes ?: appWithIssue.pendingActionDesc ?: "Variance under officer review"
-                    val desk = reviewItem?.sourceSystem ?: "District Review Desk"
-
-                    "Regarding your ${appWithIssue.schemeCode} application:\n\nAn automated check identified a data variance with $provider:\n" +
-                    "• Declared Value: $declared\n" +
-                    "• Verified Registry Value: $retrieved\n" +
-                    "• Status / Reason: $reason\n\n" +
-                    "✨ Note: This item is under active non-blocking evaluation by $desk."
-                } else {
-                    "Great news $studentName! All your current applications and documents have zero unresolved discrepancies. All automated checks are green."
-                }
-            }
-
-            q.contains("eligible") || q.contains("apply") || q.contains("top class") || q.contains("fellowship") || q.contains("scheme") -> {
-                if (student == null) {
-                    "That information is not currently available."
-                } else {
-                    val unappliedSchemes = schemes.filter { sc -> applications.none { it.schemeId == sc.id } }
-                    val evaluations = unappliedSchemes.map { sc ->
-                        val eval = EligibilityEngine.evaluate(student, sc, documents, applications)
-                        Pair(sc, eval)
-                    }
-
-                    val eligibleList = evaluations.filter { it.second.status == com.example.domain.EligibilityStatus.ELIGIBLE }
-                    val reviewList = evaluations.filter { it.second.status == com.example.domain.EligibilityStatus.NEEDS_REVIEW }
-
-                    if (eligibleList.isNotEmpty()) {
-                        val first = eligibleList.first()
-                        val sc = first.first
-                        val eval = first.second
-                        "Based on EligibilityEngine evaluation for your authenticated profile as a ${student.category} at ${student.institutionName}:\n\n" +
-                        "• **${sc.name}** (${eval.matchPercentage}% Match)\n" +
-                        "Benefit: ${sc.maxAmount}\n" +
-                        "Matched Criteria: ${eval.matchedCriteria.joinToString(", ")}\n\n" +
-                        "You can apply in 1 click using your linked DigiLocker single-wallet credentials!"
-                    } else if (reviewList.isNotEmpty()) {
-                        val first = reviewList.first()
-                        val sc = first.first
-                        val eval = first.second
-                        "For **${sc.name}**, review is required: ${eval.summaryRecommendation} ${eval.conflictReason ?: ""}"
-                    } else {
-                        "You are already enrolled or have applied for all relevant MoTA schemes matching your current academic level."
-                    }
-                }
-            }
-
-            q.contains("payment") || q.contains("dbt") || q.contains("money") || q.contains("bank") || q.contains("disburs") -> {
-                val total = disbursements.sumOf { it.amount }
-                if (disbursements.isNotEmpty()) {
-                    val last = disbursements.first()
-                    "Your DBT status is active on Section 7 Aadhaar Rail.\n\n• Total Received: ₹${String.format(Locale.ENGLISH, "% ,d", total.toInt())}\n• Recent Credit: ₹${String.format(Locale.ENGLISH, "% ,d", last.amount.toInt())}"
-                } else {
-                    "No payments have been disbursed yet for this session. Approved grants will credit directly into your Aadhaar-seeded bank account (${student?.bankAccountMasked})."
-                }
-            }
-
-            q.contains("document") || q.contains("digilocker") || q.contains("upload") || q.contains("wallet") -> {
-                val docCount = documents.size
-                "Your single-wallet contains $docCount verified digital credentials from DigiLocker & UIDAI (including ST Caste, Income, and APAAR ID). You never have to upload physical photocopies for this demo."
-            }
-
-            else -> {
-                "Johar $studentName! I am JAGO, your AI Tribal Scholarship Guide. I can help you check your application status, explain verification checks, recommend unreached schemes, or track DBT disbursements."
-            }
+        val msg = jagoAiService.generateResponse(
+            query = userQuery,
+            currentAppLangCode = languageCode,
+            student = student,
+            applications = applications,
+            disbursements = disbursements,
+            pendingReviewCount = reviewItems.size,
+            unclaimedEvaluations = unclaimedEvaluations
+        )
+        if (_isOfflineMode.value) {
+            msg.copy(content = msg.content + " [Offline Assistance Mode Active]")
+        } else {
+            msg
         }
-
-        prefix + response
     }
 }

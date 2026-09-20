@@ -1,6 +1,7 @@
 package com.example.data.local
 
 import android.content.Context
+import android.util.Log
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
@@ -67,14 +68,22 @@ abstract class EkikritDatabase : RoomDatabase() {
                         override fun onCreate(db: SupportSQLiteDatabase) {
                             super.onCreate(db)
                             scope.launch(Dispatchers.IO) {
-                                INSTANCE?.let { SeedData.populateInitialDatabase(it) }
+                                try {
+                                    INSTANCE?.let { SeedData.populateInitialDatabase(it) }
+                                } catch (t: Throwable) {
+                                    Log.e("EkikritDatabase", "Failed to seed database in onCreate: ${t.message}", t)
+                                }
                             }
                         }
 
                         override fun onDestructiveMigration(db: SupportSQLiteDatabase) {
                             super.onDestructiveMigration(db)
                             scope.launch(Dispatchers.IO) {
-                                INSTANCE?.let { SeedData.populateInitialDatabase(it) }
+                                try {
+                                    INSTANCE?.let { SeedData.populateInitialDatabase(it) }
+                                } catch (t: Throwable) {
+                                    Log.e("EkikritDatabase", "Failed to seed database in onDestructiveMigration: ${t.message}", t)
+                                }
                             }
                         }
                     })
@@ -83,8 +92,12 @@ abstract class EkikritDatabase : RoomDatabase() {
                 INSTANCE = instance
                 // Ensure initial seed data exists on startup if database was newly created or cleared
                 scope.launch(Dispatchers.IO) {
-                    if (instance.studentDao().getStudent("STU_2026_01") == null) {
-                        SeedData.populateInitialDatabase(instance)
+                    try {
+                        if (instance.studentDao().getStudent("STU_2026_01") == null) {
+                            SeedData.populateInitialDatabase(instance)
+                        }
+                    } catch (t: Throwable) {
+                        Log.e("EkikritDatabase", "Failed to verify or seed database on startup: ${t.message}", t)
                     }
                 }
                 instance

@@ -6,6 +6,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import com.example.data.model.AppLanguage
 
 private val DarkColorScheme = darkColorScheme(
     primary = Color(0xFF60A5FA),
@@ -47,6 +48,7 @@ private val LightColorScheme = lightColorScheme(
 fun EkikritTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     dynamicColor: Boolean = false, // prioritize custom government identity
+    language: AppLanguage = AppLanguage.ENGLISH,
     content: @Composable () -> Unit
 ) {
     val colorScheme = when {
@@ -60,7 +62,7 @@ fun EkikritTheme(
 
     MaterialTheme(
         colorScheme = colorScheme,
-        typography = Typography,
+        typography = getTypographyForLanguage(language),
         content = content
     )
 }
