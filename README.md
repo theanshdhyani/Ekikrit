@@ -2,178 +2,524 @@
 
 **One app for every scholarship a Scheduled Tribe student is entitled to.**
 
-Ekikrit is a native Android prototype built for **Smart India Hackathon 2026, problem statement SIH26238**: a unified scholarship experience across the Ministry of Tribal Affairs schemes for Scheduled Tribe (ST) students, including PVTG communities. It brings discovery, eligibility, document reuse, multi-registry verification, application tracking and DBT payment visibility into a single mobile app, in English, Hindi, Odia and Gondi.
+Ekikrit is a native Android prototype built for **Smart India Hackathon 2026, Problem Statement SIH26238**. It provides a unified scholarship experience for Scheduled Tribe (ST) students, including PVTG communities, by bringing scholarship discovery, eligibility, reusable digital documents, multi-source verification, application tracking, reviewer exception handling, DBT visibility and multilingual assistance into one mobile application.
 
-> **Prototype status.** The government registries (UIDAI, DigiLocker, APAAR, AISHE, UDISE+, UGC/NTA, e-District) are **simulated**. Every call goes through a real Retrofit/OkHttp client stack, but the responses come from an in-process mock gateway. See [What is real and what is simulated](#what-is-real-and-what-is-simulated).
+> **Prototype status:** Government registry integrations are simulated for this prototype. UIDAI, DigiLocker, APAAR, AISHE, UDISE+, UGC/NTA and e-District responses are provided through an in-process mock gateway so the complete workflow can be demonstrated without depending on live government APIs.
 
 ---
 
-## Why it exists
+## Why Ekikrit?
 
-A student who qualifies for several schemes today faces separate portals, repeated document uploads, opaque application status, and no signal when data from two registries disagrees. Ekikrit's answer:
+A student may be eligible for multiple scholarship pathways but still face fragmented portals, repeated document uploads, unclear application status and delays when information from different records does not match.
 
-- **Discover once:** all five schemes in one place, with an eligibility result computed for the student's own profile.
-- **Upload once:** documents are pulled from DigiLocker into a wallet and reused across schemes.
-- **Verify together:** seven registries are cross-checked in one run.
-- **Never punish a mismatch:** a discrepancy is routed to an officer, not turned into a rejection.
-- **See everything:** stage timeline, audit trail and payment history in one view.
+Ekikrit is designed around a single beneficiary journey:
 
-## Features
+* **Discover once:** evaluate the student's profile against five scholarship pathways.
+* **Upload once:** reuse verified digital credentials across applications.
+* **Verify together:** run seven verification sources through one unified workflow.
+* **Handle exceptions intelligently:** route reviewable discrepancies to an officer instead of automatically rejecting the student.
+* **Track everything:** follow application stages, review status and payment history from one place.
+* **Make it accessible:** provide English, Hindi, Odia and Gondi interfaces with voice assistance.
 
-| Area | What it does |
-|---|---|
-| **Unified dashboard** | Active applications, pending actions, notifications and the best scheme match for the student. |
-| **Five schemes** | Pre-Matric, Post-Matric, Top Class Education, National Fellowship (M.Phil/Ph.D) and National Overseas Scholarship, each with rules, ceilings and deadlines. |
-| **Eligibility engine** | Scores a student against each scheme (status, match %, failed criteria, missing documents) and enforces the one-active-scholarship rule. |
-| **DigiLocker wallet** | Connect, pull and reuse documents (Aadhaar, caste, income, marksheet, APAAR) across schemes. |
-| **Seven-source verification** | UIDAI, DigiLocker, APAAR, AISHE, UDISE+, UGC/NTA and e-District, queried concurrently. |
-| **Exception routing** | Income variance within the scheme ceiling becomes a **non-blocking** Reviewer Desk item. An unreachable registry becomes `PENDING` with an automatic retry, never a failure. |
-| **Reviewer Desk** | Officer queue scoped to the disputed field: a case reference instead of the student's name, and category shown only when category is what is in dispute. |
-| **Application tracking** | Six-stage timeline from Applied through Institute, State and Ministry review to Sanctioned and Disbursed. |
-| **DBT payments** | Consolidated disbursement history per scheme. |
-| **Unreached-beneficiary nudge** | Uses enrolment data to flag a scheme the student may qualify for but has not applied to. |
-| **Audit trail** | Every action is logged with actor and timestamp. |
-| **DPDP consent** | Consent dialog, purpose statement and a revoke/grant control, named after the DPDP Act 2023. |
-| **Offline mode** | Applications are saved as drafts and synced when connectivity returns. |
-| **Multilingual UI** | English, Hindi, Odia and Gondi. |
-| **JAGO assistant** | In-app chatbot, described below. |
+---
 
-## JAGO, the assistant
+## Core Features
 
-JAGO answers questions about status, eligibility, documents, discrepancies and payments.
+| Area                            | What it does                                                                                                                   |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| **Unified dashboard**           | Shows active applications, pending actions, notifications and the student's current scholarship opportunities.                 |
+| **Five scholarship pathways**   | Pre-Matric, Post-Matric, Top Class Education, National Fellowship for ST students, and National Overseas Scholarship.          |
+| **Eligibility engine**          | Evaluates category, education level, institution, income and application state, and explains eligibility results.              |
+| **One-active-scholarship rule** | Prevents conflicting active scholarship applications where the prototype's eligibility rules require mutual exclusion.         |
+| **DigiLocker wallet**           | Provides a reusable digital document wallet for caste, income, academic and identity-related credentials.                      |
+| **Seven-source verification**   | Demonstrates verification through UIDAI, DigiLocker, APAAR, AISHE, UDISE+, UGC/NTA and e-District.                             |
+| **Exception routing**           | A reviewable income variance becomes a non-blocking Reviewer Desk item instead of an automatic rejection.                      |
+| **Reviewer Desk**               | Provides an officer-facing queue for resolving verification exceptions.                                                        |
+| **Application tracking**        | Displays progress from application submission through institute, state and ministry verification to sanction and disbursement. |
+| **DBT payments**                | Consolidates scholarship disbursement information for the beneficiary.                                                         |
+| **Unclaimed-beneficiary nudge** | Identifies scholarship pathways for which a student may be eligible but has not yet applied.                                   |
+| **Audit trail**                 | Records application and reviewer actions with actor and timestamp information.                                                 |
+| **DPDP consent**                | Provides an explicit consent flow and consent revocation control for AI-related processing.                                    |
+| **Offline-first workflow**      | Allows applications to be stored locally as drafts and synchronized when connectivity returns.                                 |
+| **Multilingual UI**             | English, Hindi, Odia and Gondi.                                                                                                |
+| **JAGO assistant**              | A context-aware scholarship assistant for eligibility, application status, documents, discrepancies and payment questions.     |
 
-- **Gemini mode:** when the device is online, the student has given consent, and Firebase AI is configured, JAGO asks Gemini through **Firebase AI Logic**. The answer is grounded in the student's own records and written in the language selected in the app.
-- **Built-in mode:** offline, without consent, without Firebase configuration, or if the model call fails or times out (15 s), JAGO falls back to its rule-based answers. Those fallback answers are English only. A failed model call is announced with a short notice.
+---
 
-What is sent to the model is an allow-listed, de-identified summary: academic level, scheme names and stages, eligibility outcomes, document types and status, payment amounts and dates, and which verification checks are open. It never includes the student's name, mobile number, date of birth, Aadhaar, bank or IFSC details, APAAR or institution IDs, exact income, or the values inside a verification mismatch. Free text is additionally stripped of long numbers and masked identifiers. Earlier chat turns are forwarded only if they are the student's own messages or previous AI replies. Tests in `JagoGroundingTest` enforce this contract.
+## JAGO: Unified Tribal Scholarship Assistant
 
-The prompt tells the model to use only the supplied facts, treat eligibility and stage as authoritative, never request Aadhaar/OTP/bank details, and ignore instructions embedded in the student's message.
+**JAGO** is the in-app assistant designed to make the scholarship system easier to understand.
 
-> Gondi is a low-resource language. Gemini replies in Gondi are best-effort (Devanagari script, with a Hindi fallback), so review them with native speakers before relying on them.
+It can answer questions about:
+
+* scholarship eligibility
+* application status
+* pending actions
+* DigiLocker documents
+* income discrepancies
+* DBT payment information
+* how to apply
+
+### AI mode
+
+When a valid Gemini API key is configured and the device has connectivity, JAGO sends the student's sanitized application context to **Gemini 2.5 Flash** through Google's Generative Language REST API.
+
+The response is grounded in the current application state rather than being treated as an independent source of truth.
+
+### Built-in fallback mode
+
+When Gemini is unavailable, disabled or times out, JAGO falls back to a local multilingual intent engine.
+
+This allows the core assistant experience to continue without a network connection.
+
+### Data minimisation
+
+The AI layer receives an allow-listed, de-identified summary rather than the student's full record.
+
+The application is designed to avoid sending:
+
+* Aadhaar numbers
+* full bank account numbers
+* IFSC codes
+* mobile numbers
+* date of birth
+* APAAR identifiers
+* institution identifiers
+* exact income values
+* raw values from verification mismatches
+
+Free-text input is additionally sanitized before being included in AI context.
+
+The system prompt instructs JAGO to use only supplied application facts, treat application stage and eligibility state as authoritative, avoid requesting sensitive identity credentials and ignore instructions embedded inside user messages.
+
+> **Gondi note:** Gondi support is best-effort and should be reviewed with native speakers before production deployment.
+
+---
 
 ## Architecture
 
 ```mermaid
 flowchart LR
-    UI["Jetpack Compose UI<br/>M3 Screens & Modals"] --> VM["EkikritViewModel"]
+    UI["Jetpack Compose UI<br/>Material 3 Screens & Modals"]
+        --> VM["EkikritViewModel"]
+
     VM --> Repo["EkikritRepository"]
-    Repo --> DB[("Room on SQLCipher<br/>AES-256 + SeedData Callbacks")]
-    Repo --> Elig["domain.EligibilityEngine<br/>Single Source of Truth"]
-    Repo --> Ver["domain.UnifiedVerificationEngine"]
-    Ver --> Prov["7 x RemoteVerificationProvider"]
-    Prov --> API["VerificationApi<br/>Retrofit + Moshi"]
-    API --> OkHttp["OkHttp<br/>TLS 1.2+ only, no cleartext"]
-    OkHttp -.->|"this build"| Mock["MockGovInterceptor<br/>MockGovRegistry"]
-    OkHttp -.->|"production"| Gov["Government gateway"]
-    Repo --> Ground["JagoGrounding + JagoPrompt"]
-    Ground --> LLM["JagoLlm<br/>Firebase AI / Gemini"]
-    Key["DatabaseKeyProvider<br/>Android Keystore"] --> DB
+
+    Repo --> DB[("Room Database<br/>SQLCipher AES-256")]
+
+    Repo --> Elig["EligibilityEngine<br/>Single Source of Truth"]
+
+    Repo --> Ver["UnifiedVerificationEngine"]
+
+    Ver --> Prov["7 Verification Providers"]
+
+    Prov --> API["Verification Gateway<br/>Retrofit / Moshi / OkHttp"]
+
+    API --> Mock["Mock Government Gateway<br/>Prototype"]
+
+    Repo --> Ground["JAGO Context & Sanitization"]
+
+    Ground --> Gemini["Gemini 2.5 Flash"]
+
+    Key["Android Keystore<br/>Database Key Protection"] --> DB
 ```
 
-**Layers**
+### Application layers
 
-- `ui/`: Compose screens and modals, plus `EkikritViewModel`.
-- `data/repository/`: Single source of truth for active student, applications, documents, payments, review queue and JAGO.
-- `data/local/`: Room database, DAOs, automated lifecycle `SeedData` population and Keystore-backed key provider.
-- `data/remote/`: Verification gateway client (`VerificationApi`, `VerificationGateway`) and mock interceptor (`MockGovInterceptor`).
-- `data/ai/`: `JagoLlm` interface and Gemini/built-in rule-based implementations.
-- `domain/`: `EligibilityEngine`, `UnifiedVerificationEngine`, and JAGO prompt and grounding sanitizers. Pure Kotlin, tested on JVM.
+**`ui/`**
 
-## What is real and what is simulated
+Jetpack Compose screens, reusable UI components, localization and `EkikritViewModel`.
 
-| Component | Status |
-|---|---|
-| Room database, encrypted at rest with SQLCipher (AES-256), passphrase wrapped by an Android Keystore key | **Real** |
-| Aadhaar and bank details masked on storage and display | **Real** |
-| Verification client stack (Retrofit, Moshi, OkHttp, TLS 1.2+ only, cleartext refused) | **Real** |
-| Government registry responses | **Simulated** by `MockGovInterceptor`. Six sources return `VERIFIED`; e-District returns a +11.9% income variance to demo exception routing. |
-| DigiLocker connection and document pull | **Simulated** |
-| Login | **Local only.** No real OTP or identity check. Firebase Auth dependencies are present but disabled. |
-| Persona data (three demo students) | **Fictional seed data** |
-| JAGO in Gemini mode | **Real** calls to Gemini once Firebase is configured; built-in mode needs no network |
+**`data/repository/`**
 
-**Going live with a real gateway:** `VerificationGateway.createApi(baseUrl = "https://<gateway>/", interceptors = emptyList())`. The `VerificationApi` contract, request minimisation (`subjectRef` is an internal ID, never Aadhaar) and PENDING-on-failure behaviour stay as they are. Consider adding a `CertificatePinner` for that host.
+Central repository for students, applications, documents, payments, notifications, reviewer queue data and JAGO context.
 
-## Security and privacy
+**`data/local/`**
 
-- **At rest:** the Room database uses SQLCipher. A random 256-bit passphrase is stored only in wrapped form (AES-GCM under a non-exportable Android Keystore key). If the wrapped key cannot be recovered, the unreadable database is deleted and re-seeded.
-- **Backups:** `allowBackup=false`, plus explicit cloud-backup and device-transfer exclusions.
-- **Transport:** `network_security_config` blocks cleartext, and the gateway client accepts `RESTRICTED_TLS` only (TLS 1.2+ with modern suites; TLS 1.3 is not forced because it needs API 29+ and the app supports API 24+).
-- **Data minimisation:** verification requests carry only the fields a given registry needs; JAGO sends only the de-identified summary above.
-- **Consent:** third-party AI processing is skipped entirely when the student has revoked consent, and the consent dialog discloses it as a purpose.
-- **Least privilege:** only the `INTERNET` permission is requested; no storage, camera or location permissions.
-- **Reviewer scoping:** the officer queue shows the disputed field, not the applicant's identity.
+Room database, DAOs, seed data and database key management.
 
-## Getting started
+**`data/remote/`**
 
-**Requirements:** Android Studio (recent stable), JDK 21, Android SDK 36. Minimum device API is 24.
+Verification API contracts, gateway handling, Retrofit/Moshi/OkHttp networking and the mock government gateway used by the prototype.
+
+**`data/ai/`**
+
+JAGO AI service, Gemini integration, language detection, intent classification and multilingual fallback responses.
+
+**`domain/`**
+
+Pure Kotlin business logic including:
+
+* `EligibilityEngine`
+* `UnifiedVerificationEngine`
+* JAGO grounding and sanitization rules
+
+---
+
+## What is real and what is simulated?
+
+| Component                                      | Status                                      |
+| ---------------------------------------------- | ------------------------------------------- |
+| Room database                                  | **Real**                                    |
+| SQLCipher database encryption                  | **Real**                                    |
+| Android Keystore-based database key protection | **Real**                                    |
+| Aadhaar and bank identifier masking            | **Real**                                    |
+| Verification client architecture               | **Real**                                    |
+| Retrofit / Moshi / OkHttp networking stack     | **Real**                                    |
+| TLS-restricted gateway configuration           | **Real**                                    |
+| Eligibility engine                             | **Real application logic**                  |
+| Unified verification engine                    | **Real application logic**                  |
+| Government registry responses                  | **Simulated**                               |
+| DigiLocker document retrieval                  | **Simulated**                               |
+| Government login / OTP authentication          | **Local prototype only**                    |
+| Demo student identities                        | **Fictional seed data**                     |
+| Gemini integration                             | **Real when a valid API key is configured** |
+| Local JAGO fallback                            | **Real application logic**                  |
+
+### Prototype verification scenario
+
+For the demonstration workflow:
+
+* six verification sources return a verified response
+* e-District produces a deterministic income variance
+* the variance is routed as a non-blocking reviewer exception
+* the officer can review and resolve the exception
+* the application then progresses to the next verification stage
+
+This allows the complete student-to-officer workflow to be demonstrated consistently without requiring external government systems.
+
+---
+
+## Security and Privacy
+
+Ekikrit is designed with privacy and least-privilege principles in mind.
+
+### Data at rest
+
+The Room database uses SQLCipher encryption.
+
+The database passphrase is protected through the Android Keystore using a non-exportable key.
+
+### Backups
+
+Android application backup is disabled, with explicit backup and device-transfer exclusions.
+
+### Network security
+
+The application blocks cleartext traffic and uses restricted TLS configuration for remote communication.
+
+### Data minimisation
+
+Only the data required for the relevant verification or AI workflow should be passed to those services.
+
+### AI consent
+
+AI processing is subject to the application's consent flow. When consent has been revoked, third-party AI processing is skipped.
+
+### Least privilege
+
+The application requests only:
+
+* `INTERNET`
+* `ACCESS_NETWORK_STATE`
+
+No storage, camera, microphone or location permission is required by the core application workflow.
+
+### Reviewer privacy
+
+The Reviewer Desk is designed to expose the disputed field and relevant case information without unnecessarily exposing the student's complete identity profile.
+
+---
+
+## Getting Started
+
+### Requirements
+
+* Android Studio, recent stable release
+* JDK 21
+* Android SDK 36
+* Minimum Android API: 24
+
+### Clone the repository
 
 ```bash
-git clone https://github.com/jhamanas/Ekikrit.git
+git clone https://github.com/theanshdhyani/Ekikrit.git
 cd Ekikrit
-./gradlew assembleDebug        # build the debug APK
-./gradlew installDebug         # install on a connected device or emulator
 ```
 
-The app runs fully without any cloud setup. JAGO simply stays in built-in mode.
-
-### Enable Gemini-backed JAGO
-
-1. Create a Firebase project and register the Android app (`com.aistudio.ekikrit.tqvbld`).
-2. Enable **Firebase AI Logic** with the **Gemini Developer API** backend.
-3. Download `google-services.json` into `app/`.
-4. Check that `JagoConfig.MODEL_NAME` (`data/ai/JagoLlm.kt`) is a model your project can use. Firebase retires older models, so update it when needed.
-5. For anything beyond a demo, enable **App Check** so only your app can call the backend. No API key is compiled into the APK.
-
-### Demo Personas & Roles
-
-- **Birsa Munda Tirkey (`STU_2026_01`):** PVTG Birhor at NIT Rourkela, B.Tech CSE (Income: ₹2,10,000). Has an active Post-Matric application under non-blocking review (+11.9% e-District variance), cleared Pre-Matric historical grant, and Top Class scheme evaluation.
-- **Sunita Soren (`STU_2026_02`):** ST Santhal at IIT Kharagpur, B.Tech Metallurgical Engineering (Income: ₹3,20,000). Sanctioned and disbursed Top Class Education Scholarship.
-- **Jaipal Singh Munda (`STU_2026_03`):** ST Ho at Utkal University, M.Phil/Ph.D Tribal Studies (Income: ₹1,80,000). High-eligibility candidate for National Fellowship for ST (NFST) and National Overseas Scholarship (NOS).
-- **Reviewing Officer (`REV_OFFICER_01`):** District Tribal Welfare Officer (Desk #4, Sundargarh, Odisha). Toggle via the single `demo_switcher_btn` in the top app bar to view and resolve active exceptions.
-
-## Tests
+### Build the debug APK
 
 ```bash
-./gradlew testDebugUnitTest             # JVM unit and integration tests (33 tests)
-./gradlew assembleDebug                 # compile debug APK
+./gradlew assembleDebug
 ```
 
-| Suite | Description & Coverage |
-|---|---|
-| `EkikritFinalValidationTest` | Room database callback seeding, unique index integrity, identity isolation, reviewer clearance |
-| `EkikritVerificationAndReviewerTest` | Production `EkikritRepository` and `UnifiedVerificationEngine` end-to-end exception generation and resolution |
-| `EkikritEligibilityAndOwnershipTest` | Domain `EligibilityEngine` rules, statutory income ceilings, and multi-tenant student isolation |
-| `UnifiedVerificationTest` | Concurrent 7-registry verification rail execution and exception handling |
-| `EligibilityEngineTest` | Scheme eligibility scoring, missing document checks, and single-scholarship conflict rules |
-| `JagoGroundingTest` | PII sanitization, Aadhaar/bank masking, language prompting, and context grounding |
-| `VerificationGatewayTest` | Gateway models, mock interceptor network responses, and PENDING resilience |
+### Install on a connected device
 
-## Continuous integration
+```bash
+./gradlew installDebug
+```
 
-`.github/workflows/android.yml` runs unit tests and builds debug and release APKs on every push and pull request to `main`.
+The application can run without cloud configuration. JAGO will use its built-in fallback mode when Gemini is not configured.
 
-## Known limitations
+---
 
-- Registries and DigiLocker are simulated; login is local.
-- CI release builds are signed with a generated debug keystore and are not Play Store ready.
-- `fallbackToDestructiveMigration()` is still enabled, so a schema bump wipes local data. Add real migrations before shipping.
-- Some `EligibilityEngine` checks use loose string matching (for example on the ST category). Tighten them before relying on the results.
-- Built-in JAGO answers are English only.
-- Enabling encryption deletes any database created by an earlier, unencrypted build.
+## Gemini Configuration
+
+The current JAGO implementation uses Gemini 2.5 Flash through Google's Generative Language REST API.
+
+To enable Gemini mode:
+
+1. Configure a valid `GEMINI_API_KEY` through the project's supported secrets configuration.
+2. Rebuild the application.
+3. Ensure the device has network connectivity.
+4. Ensure the student has granted the required AI-processing consent.
+
+Without a valid key, JAGO automatically uses its local multilingual fallback.
+
+> Do not commit a real API key to the repository.
+
+---
+
+## Demo Personas
+
+The repository contains fictional seed data for deterministic demonstrations.
+
+### Birsa Munda Tirkey
+
+`STU_2026_01`
+
+* PVTG: Birhor
+* Institution: NIT Rourkela
+* Course: B.Tech CSE
+* Annual income: ₹2,10,000
+* Active Post-Matric application
+* Demonstration income variance routed to Reviewer Desk
+* Historical Pre-Matric award
+* Top Class evaluation
+
+### Sunita Soren
+
+`STU_2026_02`
+
+* ST: Santhal
+* Institution: IIT Kharagpur
+* Course: B.Tech Metallurgical Engineering
+* Annual income: ₹3,20,000
+* Top Class application shown as sanctioned and disbursed
+
+### Jaipal Singh Munda
+
+`STU_2026_03`
+
+* ST: Ho
+* Institution: Utkal University
+* Programme: M.Phil/Ph.D Tribal Studies
+* Annual income: ₹1,80,000
+* High-eligibility candidate for NFST and NOS
+
+### Reviewing Officer
+
+`REV_OFFICER_01`
+
+* District Tribal Welfare Officer
+* Demo Reviewer Desk identity
+* Used to review and resolve verification exceptions
+
+The application contains a single role switch control for the student and officer demo workflow.
+
+---
+
+## Demo Flow
+
+The recommended demonstration sequence is:
+
+```text
+Dashboard
+   ↓
+5 Scholarship Pathways
+   ↓
+Eligibility Result
+   ↓
+DigiLocker Wallet
+   ↓
+Application
+   ↓
+Seven-Source Verification
+   ↓
+Income Variance
+   ↓
+Reviewer Desk
+   ↓
+Officer Resolution
+   ↓
+Application Progress
+   ↓
+DBT Payments
+   ↓
+JAGO Assistant
+   ↓
+Language / Accessibility
+   ↓
+Security & Privacy
+```
+
+This sequence demonstrates the central Ekikrit concept:
+
+> **Discover → Verify → Apply → Review → Track → Receive**
+
+---
+
+## Testing
+
+### Run the JVM test suite
+
+```bash
+./gradlew testDebugUnitTest
+```
+
+The current repository contains **39 test methods** covering eligibility, verification, database integrity, identity isolation, reviewer workflows, JAGO grounding and multilingual behaviour.
+
+### Build the APK
+
+```bash
+./gradlew assembleDebug
+```
+
+### Continuous Integration
+
+The repository uses GitHub Actions to:
+
+1. run the unit test suite
+2. build the debug APK
+3. build the release APK
+4. upload APK artifacts
+
+Workflow:
+
+```text
+.github/workflows/android.yml
+```
+
+---
+
+## Test Coverage
+
+| Test Suite                           | Coverage                                                                                                |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------------- |
+| `EkikritFinalValidationTest`         | Database seeding, unique constraints, identity isolation, reviewer resolution and end-to-end validation |
+| `EkikritVerificationAndReviewerTest` | Production repository, seven-source verification, exception creation and reviewer resolution            |
+| `EkikritEligibilityAndOwnershipTest` | Eligibility rules, income limits, PVTG entitlement and student isolation                                |
+| `EligibilityEngineTest`              | Eligibility scoring, missing-document handling and scholarship conflicts                                |
+| `JagoAiServiceTest`                  | JAGO response generation and AI fallback behaviour                                                      |
+| `JagoMultilingualIntentTest`         | Multilingual intent detection                                                                           |
+| `UnifiedVerificationTest`            | Seven-source verification execution and exception handling                                              |
+| `ExampleRobolectricTest`             | Android/Robolectric test environment                                                                    |
+| `ExampleUnitTest`                    | Basic JVM unit-test environment                                                                         |
+
+---
+
+## Known Limitations
+
+This project is a working prototype, not a production deployment.
+
+### Government integrations
+
+Government registries and DigiLocker are simulated.
+
+Production deployment would require:
+
+* approved government APIs or gateways
+* authentication and authorisation mechanisms
+* official integration contracts
+* production monitoring and operational controls
+
+### Authentication
+
+The current login flow is local and does not implement production OTP-based identity verification.
+
+### Release signing
+
+CI release builds use a generated debug keystore unless a production signing key is configured.
+
+Therefore, CI release APKs are **not Play Store production artifacts**.
+
+### Database migrations
+
+The current prototype still allows destructive migration fallback. Production deployment should use explicit Room migrations.
+
+### Eligibility hardening
+
+Some eligibility checks use string-based matching and should be tightened against authoritative master-data identifiers before production use.
+
+### AI behaviour
+
+Gemini responses are probabilistic and should remain bounded by the application's grounded context and business rules.
+
+### Language review
+
+Odia and especially Gondi output should undergo native-speaker validation before production deployment.
+
+---
 
 ## Roadmap
 
-- Replace the mock interceptor with real registry integrations behind the existing `VerificationApi`.
-- Real OTP login (Firebase Auth phone) and role-based access for the Reviewer Desk.
-- Room migrations and a tamper-evident audit trail.
-- Deadline reminders via WorkManager or FCM.
-- Native-speaker review of Odia and Gondi assistant replies.
+### Government integration
 
-## Tech stack
+Replace the mock government gateway with authorised production integrations while retaining the existing verification contracts.
 
-Kotlin 2.2, Jetpack Compose (Material 3), Room + KSP, SQLCipher, Retrofit 2 + Moshi + OkHttp, Firebase AI Logic (Gemini), Firebase App Check, Kotlin Coroutines and Flow, JUnit, Robolectric, Roborazzi, GitHub Actions.
+### Authentication
+
+Introduce real identity verification and role-based authentication for beneficiaries and officers.
+
+### Database evolution
+
+Add production-grade Room migrations and a tamper-evident audit architecture.
+
+### Notifications
+
+Introduce deadline reminders and event-driven application notifications.
+
+### AI safety
+
+Expand JAGO evaluation, multilingual review, prompt-injection testing and production monitoring.
+
+### Accessibility
+
+Continue improving voice navigation, screen narration and low-connectivity workflows.
+
+---
+
+## Technology Stack
+
+* **Kotlin**
+* **Jetpack Compose**
+* **Material 3**
+* **Android SDK 36**
+* **Room**
+* **SQLCipher**
+* **Android Keystore**
+* **Kotlin Coroutines / Flow**
+* **Retrofit**
+* **Moshi**
+* **OkHttp**
+* **Gemini 2.5 Flash**
+* **JUnit**
+* **Robolectric**
+* **Roborazzi**
+* **GitHub Actions**
+
+---
+
+## Repository
+
+**GitHub:**
+https://github.com/theanshdhyani/Ekikrit
+
+**Problem Statement:**
+**SIH26238**
+
+---
 
 ## Licence
 
-No licence file is present yet. Add one before accepting outside contributions.
+No licence file is currently included in the repository. Add an appropriate licence before accepting external contributions.
