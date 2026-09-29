@@ -1,4 +1,4 @@
-# Ekikrit
+# Ekikrit - Connecting Students to Opportunities That Matter
 
 **One app for every scholarship a Scheduled Tribe student is entitled to.**
 
